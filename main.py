@@ -177,6 +177,7 @@ async def p(ctx):
         embed=embed,
         view=MusicPanel()
     )
-    import os
+
 
 bot.run(os.getenv("TOKEN"))
+
