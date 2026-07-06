@@ -74,4 +74,6 @@ async def stop(ctx):
         await ctx.send("⛔ עצרתי")
 
 
-bot.run("TOKEN")
+import os
+
+bot.run(os.getenv("TOKEN"))
