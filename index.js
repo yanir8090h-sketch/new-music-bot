@@ -36,7 +36,7 @@ client.once('ready', async () => {
 // ניהול האינטראקציות
 client.on('interactionCreate', async (interaction) => {
     
-    // 1. הפעלת פקודת /setup (ציבורית - כולם רואים אותה בערוץ)
+    // 1. הפעלת פקודת /setup
     if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
         const embed = new EmbedBuilder()
             .setColor('#2b2d31')
@@ -53,13 +53,15 @@ client.on('interactionCreate', async (interaction) => {
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
         
-        // שולח את התפריט הראשי לערוץ שכולם יוכלו לראות
         return await interaction.reply({ embeds: [embed], components: [row] });
     }
 
     // 2. כאשר מישהו בוחר אפשרות בתפריט הראשי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
+
+        // חובה! מודיע לדיסקורד מיד שקיבלנו את הלחיצה ומקפיא את זמן התגובה כדי למנוע קריסה!
+        await interaction.deferUpdate();
 
         if (selectedValue === 'style_simple') {
             const embedSimple = new EmbedBuilder()
@@ -74,8 +76,8 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
-            // משנה את ההודעה הקיימת מיד בשבריר שנייה ללא פתיחת הודעות שנתקעות!
-            return await interaction.update({ embeds: [embedSimple], components: [interaction.message.components, rowBtns] });
+            // עורך את הודעת הלוכסן הקיימת בבטחה
+            return await interaction.editReply({ embeds: [embedSimple], components: [interaction.message.components, rowBtns] });
         } 
         
         if (selectedValue === 'style_advanced') {
@@ -92,12 +94,12 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
-            // משנה את ההודעה הקיימת מיד בשבריר שנייה ללא פתיחת הודעות שנתקעות!
-            return await interaction.update({ embeds: [embedAdvanced], components: [rowBtns2] });
+            // עורך את הודעת הלוכסן הקיימת בבטחה
+            return await interaction.editReply({ embeds: [embedAdvanced], components: [rowBtns2] });
         }
     }
 
-    // 3. טיפול בלחיצות על כפתורי השליטה
+    // 3. כפתורים
     if (interaction.isButton()) {
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
             const modal = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
@@ -105,7 +107,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setCustomId('song_name_input')
                 .setLabel('הקש את שם השיר או קישור מיוטיוב:')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: אושר כהן')
+                .setPlaceholder('לדוגמה: אושר כהn')
                 .setRequired(true);
 
             const row = new ActionRowBuilder().addComponents(songInput);
