@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior } = require('@discordjs/voice');
-const play = require('play-dl');
+const scdl = require('soundcloud-downloader').default;
 
 const client = new Client({
     intents: [
@@ -105,9 +105,9 @@ client.on('interactionCreate', async (interaction) => {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('הקש את שם השיר שאתה רוצה לנגן (בלי קישור):')
+                .setLabel('רשום שם של שיר (לדוגמה: אושר כהן):')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: אושר כהן - תרקדי')
+                .setPlaceholder('תרשום שם של שיר רגיל ללא קישור...')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -139,40 +139,40 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ביוטיוב ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // 1. חיפוש חופשי לפי שם השיר
-            const yt_results = await play.search(songName, { limit: 1 });
-            if (!yt_results || yt_results.length === 0) {
-                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
+            // 1. חיפוש חופשי בסאונדקלאוד ושליפת התוצאה הראשונה
+            const tracks = await scdl.searchTracks(songName, 1);
+            if (!tracks || tracks.length === 0) {
+                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            const track = yt_results[0]; // תיקון קריטי: משיכת השיר הראשון מתוך המערך בצורה מדויקת!
+            const track = tracks[0]; // לוקח את האיבר הראשון במערך בצורה מדויקת ומאובטחת
 
-            // 2. התחברות קשיחה ויציבה לוויס
+            // 2. חיבור לוויס
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
 
-            // 3. יצירת הזרמת שמע דינמית ישירות מיוטיוב
-            const stream = await play.stream(track.url);
             player = createAudioPlayer({
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
+            // 3. הזרמה ישירה מהשרת החסין של סאונדקלאוד
+            const stream = await scdl.download(track.permalink_url);
+            const resource = createAudioResource(stream); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה על ידי שם השיר!`);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
-            await interaction.followUp({ content: '❌ תקלה בהזרמת השמע, אנא נסה שוב.', ephemeral: true });
+            await interaction.followUp({ content: '❌ תקלה בהזרמת השמע, אנא נסה שוב בעוד כמה שניות.', ephemeral: true });
         }
     }
 });
