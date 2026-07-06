@@ -176,4 +176,4 @@ distube.on('addSong', (queue, song) => {
     queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`);
 });
 
-
+bot.run(os.getenv("TOKEN"))
