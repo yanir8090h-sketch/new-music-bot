@@ -21,7 +21,7 @@ client.on('messageCreate', async (message) => {
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    if (command === 'setup') {
+   if (command === 'panel') {
         const embed = new EmbedBuilder()
             .setColor('#2b2d31')
             .setTitle('🗃️ Master Control Panel')
