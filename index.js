@@ -94,7 +94,8 @@ client.on('interactionCreate', async (interaction) => {
             });
             
                        // חיפוש השיר ב-SoundCloud שעוקף את החסימות של יוטיוב בשרתים
-            let sc_info = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
+           const play = require('play-dl');
+let sc_info = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
             if (!sc_info || sc_info.length === 0) {
                 return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
             }
