@@ -1,6 +1,6 @@
-require('@discordjs/opus');
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const play = require('play-dl');
 
 const client = new Client({
     intents: [
@@ -12,16 +12,11 @@ const client = new Client({
 });
 
 const PREFIX = '!'; 
-let player = null;
 let connection = null;
+let player = null;
 
-client.once('ready', async () => {
-    console.log(`🤖 הבוט החדש מוכן ומחובר לשמע יציב! בתור: ${client.user.tag}`);
-    const commands = [{ name: 'setup', description: 'מציג את פאנל השליטה הציבורי של הבוט' }];
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-    try {
-        await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-    } catch (e) { console.error(e); }
+client.once('ready', () => {
+    console.log(`🤖 הבוט מוכן ומחובר למוזיקה! בתור: ${client.user.tag}`);
 });
 
 function createMasterPanel() {
@@ -52,10 +47,6 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-    if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
-        return await interaction.reply(createMasterPanel());
-    }
-
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
 
@@ -114,9 +105,9 @@ client.on('interactionCreate', async (interaction) => {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('הקש את שם השיר או זרם מדיה:')
+                .setLabel('הקש את שם השיר מיוטיוב או קישור:')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: היפ הופ / פופ / רדיו')
+                .setPlaceholder('לדוגמה: אושר כהן - מנגן ושר')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -128,11 +119,9 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
             if (player) player.pause();
         }
-
         if (interaction.customId === 'btn_adv_resume') {
             if (player) player.unpause();
         }
-
         if (interaction.customId === 'btn_stop' || interaction.customId === 'btn_adv_clear_leave' || interaction.customId === 'btn_skip') {
             if (connection) {
                 connection.destroy();
@@ -147,13 +136,21 @@ client.on('interactionCreate', async (interaction) => {
         const voiceChannel = interaction.member.voice.channel;
 
         if (!voiceChannel) {
-            return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן כדי שהבוט ייכנס אליך!', ephemeral: true });
+            return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🎵 מתחבר בבטחה לערוץ הקולי ומזרים מוזיקה באיכות מלאה!`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש ביוטיוב ומכין את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // התחברות חסינת חסימות לחדר הקולי של המשתמש
+            // 1. חיפוש השיר ביוטיוב בצורה מאובטחת וחסינת חסימות
+            let yt_info = await play.search(songName, { limit: 1 });
+            if (!yt_info || yt_info.length === 0) {
+                return await interaction.followUp({ content: '❌ לא מצאתי שיר כזה ביוטיוב.', ephemeral: true });
+            }
+
+            // 2. הזרמת השמע ישירות מיוטיוב ללא צורך ב-FFmpeg חיצוני בשרת
+            let stream = await play.stream(yt_info[0].url);
+            
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
@@ -161,17 +158,16 @@ client.on('interactionCreate', async (interaction) => {
             });
 
             player = createAudioPlayer();
-            
-            // שימוש בצינור הזרמה רשמי ויציב של תחנת רדיו/מוזיקה בינלאומית שאינה נחסמת על ידי יוטיוב
-            const resource = createAudioResource('https://live.vc'); 
+            const resource = createAudioResource(stream.stream, { inputType: stream.type });
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מזרים עכשיו בחדר הקולי מוזיקה חיה 24/7 באיכות HD!\nהופעל על ידי: ${interaction.user}`);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${yt_info[0].title}**\n🔗 קישור: ${yt_info[0].url}\nהופעל על ידי: ${interaction.user}`);
 
         } catch (error) {
             console.error(error);
+            await interaction.followUp({ content: '❌ אירעה שגיאה בניסיון לנגן את השיר.', ephemeral: true });
         }
     }
 });
