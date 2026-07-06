@@ -149,22 +149,20 @@ client.on('interactionCreate', async (interaction) => {
 
             player = createAudioPlayer({
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
-            });
 
+                    
+                    const yts = require('yt-search');
 
-
-                  const yts = require('yt-search');
-        const play = require('play-dl');
-
-        // חיפוש השיר בצורה מאובטחת
+        // חיפוש השיר ביוטיוב בצורה מאובטחת
         const searchResults = await yts(songName);
         if (!searchResults || !searchResults.videos.length) {
             return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
         }
 
+        // לקיחת הסרטון הראשון שנמצא בתוצאות
         const video = searchResults.videos[0];
 
-        // הזרמת השמע מהסרטון שנמצא
+        // הזרמת השמע מהסרטון
         let stream = await play.stream(video.url);
         const resource = createAudioResource(stream.stream, {
             inputType: stream.type,
@@ -175,7 +173,6 @@ client.on('interactionCreate', async (interaction) => {
         player.play(resource);
 
         await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${video.title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
-
 
 
 
