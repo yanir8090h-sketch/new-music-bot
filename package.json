@@ -9,7 +9,7 @@
   "dependencies": {
     "discord.js": "^14.14.1",
     "@discordjs/voice": "^0.16.1",
-    "soundcloud-downloader": "^1.0.0",
+    "scdl-core": "^1.1.2",
     "libsodium-wrappers": "^0.7.15"
   }
 }
