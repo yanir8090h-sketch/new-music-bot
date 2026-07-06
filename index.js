@@ -291,4 +291,4 @@ async def master_panel_cmd(interaction: discord.Interaction):
 if __name__ == "__main__":
     if not TOKEN:
         raise SystemExit("❌ חסר DISCORD_TOKEN במשתני הסביבה")
-    bot.run(TOKEN)
+    bot.run("TOKEN")
