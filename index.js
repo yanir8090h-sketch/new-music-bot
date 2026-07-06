@@ -173,11 +173,11 @@ client.on('interactionCreate', async (interaction) => {
     }
 
 
-              } catch (error) {
+          } catch (error) {
         console.error(error);
-        await interaction.followUp({ content: '❌ אירעה שגיאה...', ephemeral: true });
+        await interaction.editReply({ content: '❌ אירעה שגיאה בהפעלת השיר!', ephemeral: true });
     }
-
 });
+
 
 client.login(process.env.TOKEN);
