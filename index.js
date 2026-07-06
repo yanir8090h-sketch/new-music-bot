@@ -90,18 +90,22 @@ client.on('interactionCreate', async (interaction) => {
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
+            
+            let yt_info = await play.search(songName, { limit: 1 });
+            if (!yt_info || yt_info.length === 0) {
+                return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
+            }
 
-                       const ytdl = require('ytdl-core');
+            const video = yt_info[0];
 
-            // הזרמת השמע ישירות מיוטיוב באמצעות החיפוש שכבר עובד
-            let stream = ytdl(`https://youtube.com{songName}`, {
-                filter: 'audioonly',
-                highWaterMark: 1 << 25
-            });
-
-            const resource = createAudioResource(stream, {
+            let stream = await play.stream(video.url);
+            const resource = createAudioResource(stream.stream, {
+                inputType: stream.type,
                 inlineVolume: true
             });
+
+
+
 
 
 
