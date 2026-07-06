@@ -9,7 +9,8 @@
   "dependencies": {
     "discord.js": "^14.14.1",
     "@discordjs/voice": "^0.16.1",
-    "libsodium": "^0.7.15",
+    "@distube/ytdl-core": "^4.15.9",
+    "ffmpeg-static": "^5.2.0",
     "libsodium-wrappers": "^0.7.15"
   }
 }
