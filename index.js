@@ -87,7 +87,8 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.deferReply({ ephemeral: true });
 
             const play = require('play-dl');
-            
+                     let yt_info = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
+  
             // חיפוש השיר ביוטיוב בצורה נקייה שמתאימה לחבילות שלך
             let yt_info = await play.search(songName, { limit: 1 });
             if (!yt_info || yt_info.length === 0) {
