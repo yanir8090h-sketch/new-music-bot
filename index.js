@@ -1,7 +1,6 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior } = require('@discordjs/voice');
 const play = require('play-dl');
-const ytext = require('youtube-ext');
 
 const client = new Client({
     intents: [
@@ -106,9 +105,9 @@ client.on('interactionCreate', async (interaction) => {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('רשום שם של שיר (לדוגמה: אושר כהן):')
+                .setLabel('הקש את שם השיר שאתה רוצה לנגן (בלי קישור):')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('תרשום שם של שיר רגיל ללא קישור...')
+                .setPlaceholder('לדוגמה: אושר כהן - תרקדי')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -140,18 +139,19 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ביוטיוב ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // 1. חיפוש חופשי בשבריר שנייה לפי שם השיר בלבד
-            const yt_results = await play.search(songName, { limit: 1 });
-            if (!yt_results || yt_results.length === 0) {
-                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
+            // 1. חיפוש חופשי ומאובטח דרך מנוע SoundCloud (עוקף לחלוטין את החסימות של יוטיוב בענן!)
+            const results = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
+            
+            if (!results || results.length === 0) {
+                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            const track = yt_results[0]; // משיכת התוצאה הראשונה
+            const track = results[0];
 
-            // 2. חיבור לוויס
+            // 2. חיבור קשיח לוויס
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
@@ -162,18 +162,18 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // 3. שימוש בצינור הזרמה חסוי שעוקף לחלוטין את החסימות של יוטיוב בענן!
-            const streamInfo = await ytext.getStream(track.url, { quality: 'high' });
-            const resource = createAudioResource(streamInfo.url, { inputType: StreamType.Arbitrary }); 
+            // 3. הזרמה ישירה ללא דרישות FFmpeg כבדות בשרת של Railway
+            const stream = await play.stream(track.url);
+            const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה על ידי שם השיר!`);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.name}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
-            await interaction.followUp({ content: '❌ תקלה בהזרמת השמע, אנא נסה שוב בעוד כמה שניות.', ephemeral: true });
+            await interaction.followUp({ content: '❌ תקלה בהזרמת השמע, אנא נסה שוב.', ephemeral: true });
         }
     }
 });
