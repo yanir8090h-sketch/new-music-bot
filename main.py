@@ -3,6 +3,7 @@ from discord.ext import commands
 import yt_dlp
 import os
 
+
 intents = discord.Intents.all()
 
 bot = commands.Bot(
@@ -10,15 +11,12 @@ bot = commands.Bot(
     intents=intents
 )
 
+
 ytdl = yt_dlp.YoutubeDL({
     "format": "bestaudio/best",
     "quiet": True,
     "noplaylist": True
 })
-
-ffmpeg_options = {
-    "options": "-vn"
-}
 
 
 def search_song(query):
@@ -32,53 +30,67 @@ def search_song(query):
 class SearchModal(discord.ui.Modal, title="🎵 חיפוש שיר"):
 
     song = discord.ui.TextInput(
-        label="איזה שיר אתה רוצה?",
-        placeholder="לדוגמה: עומר אדם - שיר חדש",
+        label="רשום שם שיר",
+        placeholder="לדוגמה: עומר אדם",
         required=True
     )
+
 
     async def on_submit(self, interaction: discord.Interaction):
 
         if not interaction.user.voice:
             await interaction.response.send_message(
-                "❌ אתה חייב להיות בחדר קול",
+                "❌ אתה חייב להיות בוויס",
                 ephemeral=True
             )
             return
 
+
         await interaction.response.defer()
 
-        channel = interaction.user.voice.channel
 
-        vc = interaction.guild.voice_client
+        try:
 
-        if not vc:
-            vc = await channel.connect()
-        else:
-            await vc.move_to(channel)
+            channel = interaction.user.voice.channel
+
+            vc = interaction.guild.voice_client
 
 
-        song = search_song(self.song.value)
-
-        url = song["url"]
-        title = song["title"]
-
-
-        source = await discord.FFmpegOpusAudio.from_probe(
-            url,
-            **ffmpeg_options
-        )
+            if not vc:
+                vc = await channel.connect()
+            else:
+                await vc.move_to(channel)
 
 
-        if vc.is_playing():
-            vc.stop()
+            song = search_song(self.song.value)
 
-        vc.play(source)
+            url = song["url"]
+            title = song["title"]
 
 
-        await interaction.followup.send(
-            f"▶ עכשיו מנגן: **{title}**"
-        )
+            if vc.is_playing():
+                vc.stop()
+
+
+            source = discord.FFmpegPCMAudio(
+                url,
+                options="-vn"
+            )
+
+
+            vc.play(source)
+
+
+            await interaction.followup.send(
+                f"▶ מנגן עכשיו: **{title}**"
+            )
+
+
+        except Exception as e:
+
+            await interaction.followup.send(
+                f"❌ שגיאה:\n{e}"
+            )
 
 
 
@@ -86,6 +98,7 @@ class MusicPanel(discord.ui.View):
 
     def __init__(self):
         super().__init__(timeout=None)
+
 
 
     @discord.ui.button(
@@ -107,23 +120,21 @@ class MusicPanel(discord.ui.View):
     )
     async def pause(
         self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
+        interaction,
+        button
     ):
 
         vc = interaction.guild.voice_client
 
         if vc and vc.is_playing():
             vc.pause()
-
             await interaction.response.send_message(
-                "⏸ השיר הושהה",
+                "⏸ הושהה",
                 ephemeral=True
             )
-
         else:
             await interaction.response.send_message(
-                "❌ אין שיר שמתנגן",
+                "אין שיר",
                 ephemeral=True
             )
 
@@ -135,23 +146,21 @@ class MusicPanel(discord.ui.View):
     )
     async def resume(
         self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
+        interaction,
+        button
     ):
 
         vc = interaction.guild.voice_client
 
         if vc and vc.is_paused():
             vc.resume()
-
             await interaction.response.send_message(
-                "▶ ממשיך לנגן",
+                "▶ ממשיך",
                 ephemeral=True
             )
-
         else:
             await interaction.response.send_message(
-                "❌ אין שיר בהשהיה",
+                "אין שיר בהשהיה",
                 ephemeral=True
             )
 
@@ -163,8 +172,8 @@ class MusicPanel(discord.ui.View):
     )
     async def skip(
         self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
+        interaction,
+        button
     ):
 
         vc = interaction.guild.voice_client
@@ -172,16 +181,10 @@ class MusicPanel(discord.ui.View):
         if vc:
             vc.stop()
 
-            await interaction.response.send_message(
-                "⏭ דילגתי",
-                ephemeral=True
-            )
-
-        else:
-            await interaction.response.send_message(
-                "❌ הבוט לא מחובר",
-                ephemeral=True
-            )
+        await interaction.response.send_message(
+            "⏭ דילגתי",
+            ephemeral=True
+        )
 
 
 
@@ -191,8 +194,8 @@ class MusicPanel(discord.ui.View):
     )
     async def stop(
         self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
+        interaction,
+        button
     ):
 
         vc = interaction.guild.voice_client
@@ -200,16 +203,10 @@ class MusicPanel(discord.ui.View):
         if vc:
             await vc.disconnect()
 
-            await interaction.response.send_message(
-                "⛔ עצרתי את המוזיקה",
-                ephemeral=True
-            )
-
-        else:
-            await interaction.response.send_message(
-                "❌ הבוט לא מחובר",
-                ephemeral=True
-            )
+        await interaction.response.send_message(
+            "⛔ עצרתי",
+            ephemeral=True
+        )
 
 
 
@@ -218,9 +215,10 @@ async def p(ctx):
 
     embed = discord.Embed(
         title="🎵 Music Panel",
-        description="לחץ על הכפתורים כדי לשלוט במוזיקה",
+        description="בחר פעולה",
         color=0x00ff00
     )
+
 
     await ctx.send(
         embed=embed,
@@ -231,7 +229,7 @@ async def p(ctx):
 
 @bot.event
 async def on_ready():
-    print(f"מחובר בתור {bot.user}")
+    print("Bot Online")
 
 
 
