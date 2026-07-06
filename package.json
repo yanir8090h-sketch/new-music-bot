@@ -7,7 +7,6 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "ytdl-core": "^4.11.5"
     "discord.js": "^14.15.3",
     "@discordjs/voice": "^0.17.0",
     "play-dl": "^1.9.6",
