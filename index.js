@@ -86,21 +86,26 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.deferReply({ ephemeral: true });
 
-                  const play = require('play-dl');
+            const play = require('play-dl');
             
-            // חיפוש חלופי ויציב ביוטיוב שלא נחסם בגרסה הזו
+            // חיפוש השיר ביוטיוב בצורה נקייה שמתאימה לחבילות שלך
             let yt_info = await play.search(songName, { limit: 1 });
             if (!yt_info || yt_info.length === 0) {
                 return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
             }
 
-            const video = yt_info[0];
+            const video = yt_info;
 
             let stream = await play.stream(video.url);
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type,
                 inlineVolume: true
             });
+
+            connection.subscribe(player);
+            player.play(resource);
+
+            await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${video.title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
 
 
 
