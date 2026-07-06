@@ -172,6 +172,9 @@ client.on('interactionCreate', async (interaction) => {
 //        console.error(error);
 //        await interaction.followUp({ content: '❌ אירעה שגיאה...', ephemeral: true });
 //    }
+}
+}
+});
 
 
 client.login(process.env.TOKEN);
