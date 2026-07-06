@@ -4,24 +4,25 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates
     ]
 });
 
 const PREFIX = '!'; 
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט החדש מוכן ופועל! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן ומעודכן לפאנל נסתר יציב! מחובר בתור: ${client.user.tag}`);
 });
 
-// פקודת Setup הציבורית שכולם רואים בערוץ
+// פקודת Setup הציבורית (התפריט הראשי שכולם רואים)
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-   if (command === 'panel') {
+    if (command === 'setup') {
         const embed = new EmbedBuilder()
             .setColor('#2b2d31')
             .setTitle('🗃️ Master Control Panel')
@@ -52,11 +53,15 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// ניהול האינטראקציות - הפאנלים נשלחים כהודעה נסתרת (ephemeral) בלבד!
+// ניהול האינטראקציות בתוך האפמראל (Ephemeral)
 client.on('interactionCreate', async (interaction) => {
     
+    // 1. בחירת פאנל מתוך התפריט הציבורי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
+
+        // חובה להשתמש ב-deferReply כדי שדיסקורד ידע שהתחלנו לעבד את ההודעה הנסתרת
+        await interaction.deferReply({ ephemeral: true });
 
         if (selectedValue === 'style_simple') {
             const embedSimple = new EmbedBuilder()
@@ -71,8 +76,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
-            // שליחת הנגן כהודעה פרטית חדשה לחלוטין למי שלחץ
-            return await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
+            return await interaction.editReply({ embeds: [embedSimple], components: [rowBtns] });
         } 
         
         if (selectedValue === 'style_advanced') {
@@ -89,15 +93,18 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
-            // שליחת הנגן כהודעה פרטית חדשה לחלוטין למי שלחץ
-            return await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
+            return await interaction.editReply({ embeds: [embedAdvanced], components: [rowBtns2] });
         }
     }
 
-    // פתיחת חלונית חיפוש השיר (Modal)
+    // 2. טיפול בלחיצות בתוך ההודעה הנסתרת (האפמראל)
     if (interaction.isButton()) {
+        // פתיחת חלון קופץ (Modal) - בדיסקורד חובה להציג אותו מיידית בלי deferUpdate/Reply לפני!
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
-            const modal = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
+            const modal = new ModalBuilder()
+                .setCustomId('music_play_modal')
+                .setTitle('🎵 הזרמת שיר בזמן אמת');
+
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
                 .setLabel('הקש את שם השיר או קישור מיוטיוב:')
@@ -107,16 +114,22 @@ client.on('interactionCreate', async (interaction) => {
 
             const row = new ActionRowBuilder().addComponents(songInput);
             modal.addComponents(row);
+            
+            // מציג את החלון הקופץ ישירות על גבי האפמראל
             return await interaction.showModal(modal);
         }
 
-        // שאר הכפתורים יחזירו אישור קטן ונסתר
-        return await interaction.reply({ content: '🔘 הפקודה התקבלה במערכת!', ephemeral: true });
+        // לשאר כפתורי השליטה (השהה, עצור וכו') - מעדכנים את האפמראל הקיים כדי שלא ייתקע
+        await interaction.deferUpdate();
+        console.log(`כפתור נלחץ באפמראל: ${interaction.customId}`);
     }
 
+    // 3. קבלת קלט מהחלון הקופץ שנפתח מתוך האפמראל
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
-        return await interaction.reply({ content: `🔍 מחפש ומנגן עבורך: **${songName}**`, ephemeral: true });
+        
+        // עונה בתוך הודעה נסתרת חדשה כדי למנוע התנגשויות
+        return await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**`, ephemeral: true });
     }
 });
 
