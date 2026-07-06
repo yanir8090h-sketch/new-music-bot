@@ -201,5 +201,6 @@ async def on_ready():
         f"הבוט מחובר בתור {bot.user}"
     )
 
+import os
 
-bot.run("TOKEN")
+bot.run(os.getenv("TOKEN"))
