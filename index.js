@@ -12,7 +12,7 @@ const client = new Client({
 const PREFIX = '!'; 
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן ומעודכן לפאנל נסתר יציב! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן וטוען פאנל נסתר מהיר! מחובר בתור: ${client.user.tag}`);
 });
 
 // פקודת Setup הציבורית (התפריט הראשי שכולם רואים)
@@ -53,16 +53,13 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// ניהול האינטראקציות בתוך האפמראל (Ephemeral)
+// ניהול האינטראקציות - שליחת פאנל נסתר מהיר ללא זמני טעינה
 client.on('interactionCreate', async (interaction) => {
     
-    // 1. בחירת פאנל מתוך התפריט הציבורי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
 
-        // חובה להשתמש ב-deferReply כדי שדיסקורד ידע שהתחלנו לעבד את ההודעה הנסתרת
-        await interaction.deferReply({ ephemeral: true });
-
+        // שליחת הפאנל הפשוט בצורה נסתרת ומיידית ללא defer
         if (selectedValue === 'style_simple') {
             const embedSimple = new EmbedBuilder()
                 .setColor('#2b2d31')
@@ -76,9 +73,10 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
-            return await interaction.editReply({ embeds: [embedSimple], components: [rowBtns] });
+            return await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
         } 
         
+        // שליחת הפאנל המתקדם בצורה נסתרת ומיידית ללא defer
         if (selectedValue === 'style_advanced') {
             const embedAdvanced = new EmbedBuilder()
                 .setColor('#23a55a')
@@ -93,18 +91,13 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
-            return await interaction.editReply({ embeds: [embedAdvanced], components: [rowBtns2] });
+            return await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
         }
     }
 
-    // 2. טיפול בלחיצות בתוך ההודעה הנסתרת (האפמראל)
     if (interaction.isButton()) {
-        // פתיחת חלון קופץ (Modal) - בדיסקורד חובה להציג אותו מיידית בלי deferUpdate/Reply לפני!
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
-            const modal = new ModalBuilder()
-                .setCustomId('music_play_modal')
-                .setTitle('🎵 הזרמת שיר בזמן אמת');
-
+            const modal = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
                 .setLabel('הקש את שם השיר או קישור מיוטיוב:')
@@ -114,22 +107,16 @@ client.on('interactionCreate', async (interaction) => {
 
             const row = new ActionRowBuilder().addComponents(songInput);
             modal.addComponents(row);
-            
-            // מציג את החלון הקופץ ישירות על גבי האפמראל
             return await interaction.showModal(modal);
         }
 
-        // לשאר כפתורי השליטה (השהה, עצור וכו') - מעדכנים את האפמראל הקיים כדי שלא ייתקע
+        // עדכון פנימי מהיר לכפתורי השליטה האחרים
         await interaction.deferUpdate();
-        console.log(`כפתור נלחץ באפמראל: ${interaction.customId}`);
     }
 
-    // 3. קבלת קלט מהחלון הקופץ שנפתח מתוך האפמראל
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
-        
-        // עונה בתוך הודעה נסתרת חדשה כדי למנוע התנגשויות
-        return await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**`, ephemeral: true });
+        return await interaction.reply({ content: `🔍 מחפש ומזרים עבורך מיוטיוב: **${songName}**`, ephemeral: true });
     }
 });
 
