@@ -3,7 +3,6 @@ const play = require('play-dl');
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.GatewayIntentBits,
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildVoiceStates
