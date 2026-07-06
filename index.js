@@ -93,7 +93,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const player = createAudioPlayer();
 
-            let yt_info = await play.search(songName, { limit: 1 });
+                      let yt_info = await play.search(songName, { limit: 1 });
             if (!yt_info || yt_info.length === 0) {
                 return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
             }
