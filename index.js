@@ -89,4 +89,14 @@ async def musicpanel(ctx):
     )
 
     await ctx.send(embed=embed, view=MusicView())
-client.login(process.env.TOKEN);
+
+
+
+import os
+
+TOKEN = os.getenv("TOKEN")
+
+if TOKEN is None:
+    print("❌ לא נמצא TOKEN במשתני הסביבה.")
+else:
+    bot.run(TOKEN)
