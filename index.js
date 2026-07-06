@@ -152,24 +152,20 @@ client.on('interactionCreate', async (interaction) => {
             });
 
             // כתובות הזרמה ישירות של שרתי מדיה רשמיים (עוקף לחלוטין את כל החסימות באינטרנט!)
-            let streamUrl = 'https://live.vc'; // ברירת מחדל: פופ עולמי
-            let choiceName = 'Pop Hits Live 🎵';
+                   // חיפוש השיר ביוטיוב לפי השם שהמשתמש הזין
+        const play = require('play-dl');
+        let songName = choiceName; // משתנה שם השיר מהמודאל שלך
+        
+        let yt_info = await play.search(songName, { limit: 1 });
+        if (!yt_info || yt_info.length === 0) {
+            return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
+        }
 
-            if (songName.includes('גלגלצ') || songName.includes('גלג') || songName.includes('mizrahit') || songName.includes('מזרחית')) {
-                streamUrl = 'https://rlive.co.il'; // גלגלצ הרשמי
-                choiceName = 'רדיו גלגלצ 📻';
-            } else if (songName.includes('היפ הופ') || songName.includes('hip hop') || songName.includes('היפ')) {
-                streamUrl = 'https://live.vc'; // היפ הופ ו-RnB עולמי
-                choiceName = 'Hip Hop Hits Live ⚡';
-            }
-
-            // שימוש ב-StreamType.Arbitrary שמכריח את דיסקורד להזרים את השמע ישירות מהשרת ללא קריסות
-                const ffmpeg = require('ffmpeg-static');
-        const { StreamType } = require('@discordjs/voice');
-        const resource = createAudioResource(streamUrl, {
-            inputType: StreamType.Arbitrary,
-            executablePath: ffmpeg
+        let stream = await play.stream(yt_info[0].url, { discordPlayerCompatibility: true });
+        const resource = createAudioResource(stream.stream, {
+            inputType: stream.type
         });
+
 
 
         player.play(resource);
