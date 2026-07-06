@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+\const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { DisTube } = require('distube');
 
 const client = new Client({
@@ -19,7 +19,7 @@ const distube = new DisTube(client, {
 const PREFIX = '!'; 
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן ומעודכן סופית! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן ומעודכן סופית לפאנל נסתר! מחובר בתור: ${client.user.tag}`);
 });
 
 // פקודת Setup ששולחת את התפריט הציבורי שכולם רואים
@@ -66,7 +66,10 @@ client.on('interactionCreate', async (interaction) => {
 
     // 1. כאשר משתמש בוחר אפשרות בתפריט הנפתח הציבורי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
-        const selectedValue = interaction.values;
+        const selectedValue = interaction.values[0];
+
+        // חובה להודיע לדיסקורד מיד כדי למנוע את השגיאה האדומה באופן מיידי!
+        await interaction.deferReply({ ephemeral: true });
 
         if (selectedValue === 'style_simple') {
             const embedSimple = new EmbedBuilder()
@@ -81,8 +84,8 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
-            // שולח הודעה פרטית חדשה לחלוטין (ephemeral) מבלי לגעת בהודעה הציבורית
-            return await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
+            // שולח את התשובה ששמרנו מראש בתוך ההודעה הפרטית
+            return await interaction.editReply({ embeds: [embedSimple], components: [rowBtns] });
         } 
         
         if (selectedValue === 'style_advanced') {
@@ -99,8 +102,8 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
-            // שולח הודעה פרטית חדשה לחלוטין (ephemeral) מבלי לגעת בהודעה הציבורית
-            return await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
+            // שולח את התשובה ששמרנו מראש בתוך ההודעה הפרטית
+            return await interaction.editReply({ embeds: [embedAdvanced], components: [rowBtns2] });
         }
     }
 
@@ -120,39 +123,35 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.showModal(modal);
         }
 
-        // שימוש ב-update כדי לענות לכפתורים (השהה, דילוג וכו') בתוך ההודעה הפרטית שלהם
+        // שימוש ב-deferUpdate עבור שאר הכפתורים כדי לעדכן בצורה חלקה בתוך הממשק הנסתר
+        await interaction.deferUpdate();
+
         if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
-            if (!queue) return interaction.reply({ content: 'אין מוזיקה שמנגנת כרגע.', ephemeral: true });
+            if (!queue) return;
             if (queue.paused) {
                 distube.resume(interaction.guildId);
-                await interaction.reply({ content: '▶️ המוזיקה חזרה לנגן.', ephemeral: true });
             } else {
                 distube.pause(interaction.guildId);
-                await interaction.reply({ content: '⏸️ המוזיקה הושהתה.', ephemeral: true });
             }
         }
 
         if (interaction.customId === 'btn_adv_resume') {
-            if (!queue) return interaction.reply({ content: 'אין שיר ברשימה.', ephemeral: true });
-            if (!queue.paused) return interaction.reply({ content: 'המוזיקה כבר מנגנת.', ephemeral: true });
+            if (!queue || !queue.paused) return;
             distube.resume(interaction.guildId);
-            await interaction.reply({ content: '▶️ המוזיקה חזרה לנגן.', ephemeral: true });
         }
 
         if (interaction.customId === 'btn_skip' || interaction.customId === 'btn_adv_next') {
-            if (!queue) return interaction.reply({ content: 'אין שירים נוספים בתור.', ephemeral: true });
+            if (!queue) return;
             try {
                 await distube.skip(interaction.guildId);
-                await interaction.reply({ content: '⏭️ דילגתי לשיר הבא בתור.', ephemeral: true });
-            } catch {
-                await interaction.reply({ content: 'אין שירים נוספים ברשימה.', ephemeral: true });
+            } catch (e) {
+                console.log("אין עוד שירים");
             }
         }
 
         if (interaction.customId === 'btn_stop' || interaction.customId === 'btn_adv_clear_leave') {
-            if (!queue) return interaction.reply({ content: 'הבוט לא מנגן כרגע.', ephemeral: true });
+            if (!queue) return;
             distube.stop(interaction.guildId);
-            await interaction.reply({ content: '🛑 הזרמת המוזיקה הופסקה והבוט התנתק.', ephemeral: true });
         }
     }
 
@@ -184,7 +183,7 @@ distube.on('playSong', (queue, song) => {
 });
 
 distube.on('addSong', (queue, song) => {
-    queue.textChannel.send(`\n✅ התווסף לתור ההזרמה: **${song.name}**`);
+    queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`);
 });
 
 client.login(process.env.TOKEN);
