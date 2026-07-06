@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
 const play = require('play-dl');
 
 const client = new Client({
@@ -18,6 +18,7 @@ let player = null;
 client.once('ready', async () => {
     console.log(`🤖 בוט המוזיקה החופשי מוכן ויציב! מחובר בתור: ${client.user.tag}`);
     
+    // הפעלת מפתח הגישה של סאונדקלאוד כדי למנוע חסימות שמע
     try {
         await play.getFreeClientID();
         console.log("✅ מפתח הגישה של סאונדקלאוד הופעל בהצלחה!");
@@ -146,7 +147,7 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ומזריר עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
             // חיפוש חופשי ומאובטח דרך מנוע SoundCloud (עוקף לחלוטין את החסימות של יוטיוב בענן)
@@ -156,7 +157,7 @@ client.on('interactionCreate', async (interaction) => {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            const track = results[0]; // לוקח את השיר הראשון מתוך המערך
+            const track = results[0]; // לוקח את השיר הראשון מתוך המערך בצורה נכונה ומדויקת
 
             // חיבור לוויס
             connection = joinVoiceChannel({
@@ -169,14 +170,13 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // הזרמה ישירה עם מפתח הגישה המאושר
+            // הזרמה ישירה עם המפענח הדינמי ללא באגים
             const stream = await play.stream(track.url);
-            const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
+            const resource = createAudioResource(stream.stream, { inputType: StreamType.Arbitrary }); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            // תיקון קריטי: החלפת track.name ב-track.title כדי למנוע את השגיאה לחלוטין
             interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
