@@ -1,5 +1,7 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
+const { generateDependencyReport } = require('@discordjs/voice');
+console.log(generateDependencyReport());
 
 const client = new Client({
     intents: [
@@ -113,7 +115,7 @@ client.on('interactionCreate', async (interaction) => {
             connection.subscribe(player);
             player.play(resource);
 
-            await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${video.title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
+          await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${track.name}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
 
         } catch (error) {
             console.error(error);
