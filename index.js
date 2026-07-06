@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
-const scdl = require('scdl-core');
+const play = require('play-dl');
 
 const client = new Client({
     intents: [
@@ -15,10 +15,8 @@ const PREFIX = '!';
 let connection = null;
 let player = null;
 
-client.once('ready', async () => {
+client.once('ready', () => {
     console.log(`🤖 בוט המוזיקה החופשי מוכן ויציב! מחובר בתור: ${client.user.tag}`);
-    // חיבור למנוע החיפוש
-    await scdl.connect().catch(console.error);
 });
 
 function createMasterPanel() {
@@ -141,18 +139,21 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש ביוטיוב ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // 1. חיפוש חופשי נקי לפי שם (בלי קישורים)
-            const searchResults = await scdl.search({ query: songName, limit: 1, filter: 'tracks' });
-            if (!searchResults || !searchResults.collection || searchResults.collection.length === 0) {
-                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
+            // 1. חיפוש חופשי לפי שם בלבד (בלי קישורים!)
+            const yt_info = await play.search(songName, { limit: 1 });
+            if (!yt_info || yt_info.length === 0) {
+                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
             }
 
-            const track = searchResults.collection[0]; // שליפת השיר הראשון בצורה מדויקת מהמערך
+            const track = yt_info[0];
 
-            // 2. חיבור לוויס
+            // 2. יצירת הזרמת שמע מאובטחת ועוקפת חסימות ענן
+            const stream = await play.stream(track.url);
+
+            // 3. חיבור לוויס
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
@@ -163,9 +164,7 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // 3. הזרמת השמע ישירות מהשרת של סאונדקלאוד
-            const stream = await scdl.download(track.permalink_url);
-            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary }); 
+            const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
             
             player.play(resource);
             connection.subscribe(player);
