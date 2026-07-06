@@ -166,15 +166,19 @@ client.on('interactionCreate', async (interaction) => {
         player.play(resource);
 
         await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${video.title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
-
-
 //    } catch (error) {
 //        console.error(error);
 //        await interaction.followUp({ content: '❌ אירעה שגיאה...', ephemeral: true });
 //    }
-}
-}
+
+
+    } catch (error) {
+        console.error(error);
+    }
 });
+
+client.login(process.env.TOKEN);
+
 
 
 client.login(process.env.TOKEN);
