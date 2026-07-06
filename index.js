@@ -19,7 +19,7 @@ const distube = new DisTube(client, {
 const PREFIX = '!'; 
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן ומאובטח! מחובר בתור: ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (message) => {
@@ -176,4 +176,5 @@ distube.on('addSong', (queue, song) => {
     queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`);
 });
 
-bot.run(os.getenv("TOKEN"))
+// קריאה מאובטחת לטוקן מתוך המערכת של Railway
+client.login(TOKEN);
