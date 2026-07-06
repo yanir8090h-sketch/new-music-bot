@@ -151,7 +151,7 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
 
                     
-                    const yts = require('yt-search');
+        const yts = require('yt-search');
 
         // חיפוש השיר ביוטיוב בצורה מאובטחת
         const searchResults = await yts(songName);
@@ -159,7 +159,7 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
         }
 
-        // לקיחת הסרטון הראשון שנמצא בתוצאות
+        // לקיחת הסרטון הראשון מהמערך בצורה תקינה
         const video = searchResults.videos[0];
 
         // הזרמת השמע מהסרטון
