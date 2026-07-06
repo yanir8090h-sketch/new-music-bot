@@ -153,17 +153,17 @@ client.on('interactionCreate', async (interaction) => {
                     
         const yts = require('yt-search');
 
-        // חיפוש השיר ביוטיוב בצורה מאובטחת
+        // חיפוש השיר ביוטיוב
         const searchResults = await yts(songName);
         if (!searchResults || !searchResults.videos || searchResults.videos.length === 0) {
             return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
         }
 
-        // לקיחת התוצאה הראשונה בצורה נקייה ללא סוגריים בעייתיים
-        const firstVideo = searchResults.videos.shift();
+        // לקיחת התוצאה הראשונה מהחיפוש
+        const video = searchResults.videos.shift();
 
-        // הזרמת השמע מהסרטון
-        let stream = await play.stream(firstVideo.url);
+        // יצירת זרם האודיו באמצעות הכתובת הישירה של הסרטון
+        let stream = await play.stream(video.url);
         const resource = createAudioResource(stream.stream, {
             inputType: stream.type,
             inlineVolume: true
@@ -172,7 +172,7 @@ client.on('interactionCreate', async (interaction) => {
         connection.subscribe(player);
         player.play(resource);
 
-        await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${firstVideo.title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
+        await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${video.title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
 
 
 
