@@ -98,12 +98,11 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             const track = sc_info.shift();
-
-            let stream = await play.stream(track.url);
+                        let stream = await play.stream(track.url);
             const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
                 inlineVolume: true
             });
+
 
 
 
