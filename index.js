@@ -89,19 +89,23 @@ client.on('interactionCreate', async (interaction) => {
             const play = require('play-dl');
                      let yt_info = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
   
-            // חיפוש השיר ביוטיוב בצורה נקייה שמתאימה לחבילות שלך
-            let yt_info = await play.search(songName, { limit: 1 });
-            if (!yt_info || yt_info.length === 0) {
+                        const yts = require('yt-search');
+
+            // חיפוש יציב שלא קורס ולא תלוי ביוטיוב או סאונדקלאוד של play-dl
+            const searchResults = await yts(songName);
+            if (!searchResults || !searchResults.videos || searchResults.videos.length === 0) {
                 return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
             }
 
-            const video = yt_info;
+            const video = searchResults.videos.shift();
 
+            // הזרמת השמע מהסרטון שנמצא
             let stream = await play.stream(video.url);
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type,
                 inlineVolume: true
             });
+
 
             connection.subscribe(player);
             player.play(resource);
