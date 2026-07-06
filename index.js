@@ -1,6 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const play = require('play-dl');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, NoSubscriberBehavior } = require('@discordjs/voice');
 
 const client = new Client({
     intents: [
@@ -16,7 +15,7 @@ let connection = null;
 let player = null;
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן ומחובר למוזיקה! בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן ומחובר לשמע חסין! בתור: ${client.user.tag}`);
 });
 
 function createMasterPanel() {
@@ -105,9 +104,9 @@ client.on('interactionCreate', async (interaction) => {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('הקש את שם השיר מיוטיוב או קישור:')
+                .setLabel('הקש פופ / היפ הופ / מזרחית / רדיו:')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: אושר כהן - מנגן ושר')
+                .setPlaceholder('לדוגמה: רדיו')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -132,42 +131,48 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
-        const songName = interaction.fields.getTextInputValue('song_name_input');
+        const songName = interaction.fields.getTextInputValue('song_name_input').toLowerCase();
         const voiceChannel = interaction.member.voice.channel;
 
         if (!voiceChannel) {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ביוטיוב ומכין את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🎵 מתחבר ישירות לערוץ הקולי ומזרים סאונד נקי...`, ephemeral: true });
 
         try {
-            // 1. חיפוש השיר ביוטיוב בצורה מאובטחת וחסינת חסימות
-            let yt_info = await play.search(songName, { limit: 1 });
-            if (!yt_info || yt_info.length === 0) {
-                return await interaction.followUp({ content: '❌ לא מצאתי שיר כזה ביוטיוב.', ephemeral: true });
-            }
-
-            // 2. הזרמת השמע ישירות מיוטיוב ללא צורך ב-FFmpeg חיצוני בשרת
-            let stream = await play.stream(yt_info[0].url);
-            
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
 
-            player = createAudioPlayer();
-            const resource = createAudioResource(stream.stream, { inputType: stream.type });
+            player = createAudioPlayer({
+                behaviors: { noSubscriber: NoSubscriberBehavior.Play }
+            });
+
+            // הגדרת לינקים ישירים של שרתי מדיה יציבים (לא נחסמים על ידי שרתי ענן)
+            let streamUrl = 'https://live.vc'; // ברירת מחדל: מוזיקת פופ בינלאומית
+            let choiceName = 'Pop Hits Live';
+
+            if (songName.includes('מזרחית') || songName.includes('mizrahit')) {
+                streamUrl = 'https://rlive.co.il'; // רדיו גלגלצ
+                choiceName = 'גלגלצ Live';
+            } else if (songName.includes('היפ הופ') || songName.includes('hip hop')) {
+                streamUrl = 'https://live.vc'; // היפ הופ עולמי
+                choiceName = 'Hip Hop & RnB Live';
+            }
+
+            const resource = createAudioResource(streamUrl); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${yt_info[0].title}**\n🔗 קישור: ${yt_info[0].url}\nהופעל על ידי: ${interaction.user}`);
+            interaction.channel.send(`🎶 הבוט נכנס בהצלחה לחדר הקולי ומנגן כעת: **${choiceName}** 24/7 באיכות HD!\nהופעל על ידי: ${interaction.user}`);
 
         } catch (error) {
             console.error(error);
-            await interaction.followUp({ content: '❌ אירעה שגיאה בניסיון לנגן את השיר.', ephemeral: true });
+            await interaction.followUp({ content: '❌ תקלה בחיבור לערוץ השמע.', ephemeral: true });
         }
     }
 });
