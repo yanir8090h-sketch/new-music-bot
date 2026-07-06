@@ -1,5 +1,5 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjsvoice');
+const { Client, GatewayIntentBits, createAudioPlayer, createAudioResource, joinVoiceChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const play = require('play-dl');
 
 const client = new Client({
     intents: [
@@ -10,14 +10,10 @@ const client = new Client({
     ]
 });
 
-
-const PREFIX = '!'; 
-let connection = null;
-let player = null;
-
-client.once('ready', () = {
-    console.log(`🤖 בוט המוזיקה החסין מוכן ויציב! מחובר בתור ${client.user.tag}`);
+client.on('ready', () => {
+    console.log(`✅ הבוט מחובר כעת בתור ${client.user.tag}`);
 });
+
 
 function createMasterPanel() {
     const embed = new EmbedBuilder()
