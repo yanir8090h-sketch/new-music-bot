@@ -173,11 +173,11 @@ client.on('interactionCreate', async (interaction) => {
     }
 
 
-        } catch (error) {
-            console.error(error);
-            await interaction.followUp({ content: '❌ תקלה בפתיחת ערוץ השמע המאובטח.', ephemeral: true });
-        }
+            } catch (error) {
+        console.error(error);
+        await interaction.followUp({ content: '❌ אירעה שגיאה...', ephemeral: true });
     }
+
 });
 
 client.login(process.env.TOKEN);
