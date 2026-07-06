@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, AudioPlayerStatus } = require('@discordjs/voice');
 const play = require('play-dl');
 
 const client = new Client({
@@ -142,7 +142,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: `🔍 מחפש ביוטיוב ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // 1. חיפוש חופשי לפי שם בלבד (בלי קישורים!)
+            // 1. חיפוש חופשי לפי שם
             const yt_info = await play.search(songName, { limit: 1 });
             if (!yt_info || yt_info.length === 0) {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
@@ -150,16 +150,15 @@ client.on('interactionCreate', async (interaction) => {
 
             const track = yt_info[0];
 
-            // 2. יצירת הזרמת שמע מאובטחת ועוקפת חסימות ענן
-            const stream = await play.stream(track.url);
-
-            // 3. חיבור לוויס
+            // 2. התחברות מהירה לערוץ
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
 
+            // 3. תיקון קריטי: יצירת הזרמת שמע ישירה שעוקפת את לולאת התקיעה ב-Railway
+            const stream = await play.stream(track.url, { quality: 0 });
             player = createAudioPlayer({
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
