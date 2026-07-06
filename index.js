@@ -130,19 +130,26 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
-        const songName = interaction.fields.getTextInputValue('song_name_input').toLowerCase();
-        const voiceChannel = interaction.member.voice.channel;
+     if (interaction.customId === 'music_modal') {
+        const songName = interaction.fields.getTextInputValue('song_input');
 
+        const voiceChannel = interaction.member.voice.channel;
         if (!voiceChannel) {
-            return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
+            return await interaction.reply({ content: '❌ אתה חייב להיות בערוץ קול כדי להפעיל מוזיקה!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🎵 מתחבר בבטחה ופותח את ערוץ השמע...`, ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
 
+        try {
+            const connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: voiceChannel.guild.id,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+            });
 
+            const player = createAudioPlayer();
 
-               let yt_info = await play.search(songName, { limit: 1 });
+                    let yt_info = await play.search(songName, { limit: 1 });
         if (!yt_info || yt_info.length === 0) {
             return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
         }
@@ -165,27 +172,6 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply({ content: '❌ אירעה שגיאה בהפעלת השיר!', ephemeral: true });
     }
 
-
-
-
-
-
-
-
-       
-
-
-
-       
-
-
-       
-
-      
-
-
-
-        
 
         } catch (error) {
             console.error(error);
