@@ -142,13 +142,13 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: `🔍 מחפש במערכת ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // 1. חיפוש חופשי לפי שם
+            // 1. חיפוש חופשי - התיקון לקח בדיוק את התוצאה הראשונה מהמערך [0]
             const tracks = await scdl.searchTracks(songName, 1);
             if (!tracks || tracks.length === 0) {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            const track = tracks[0];
+            const track = tracks[0]; // לוקח את השיר הראשון שנמצא
 
             // 2. חיבור לוויס
             connection = joinVoiceChannel({
@@ -161,7 +161,7 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // 3. הזרמת השמע ישירות מהשרת החסין של סאונדקלאוד ללא StreamType שגוי
+            // 3. הזרמת השמע ישירות מהקישור של השיר שמצאנו
             const stream = await scdl.download(track.permalink_url);
             const resource = createAudioResource(stream); 
             
