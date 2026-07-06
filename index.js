@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior } = require('@discordjs/voice');
 const scdl = require('soundcloud-downloader').default;
 
 const client = new Client({
@@ -161,9 +161,9 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // 3. הזרמת השמע ישירות מהשרת של סאונדקלאוד
+            // 3. הזרמת השמע ישירות מהשרת החסין של סאונדקלאוד ללא StreamType שגוי
             const stream = await scdl.download(track.permalink_url);
-            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary }); 
+            const resource = createAudioResource(stream); 
             
             player.play(resource);
             connection.subscribe(player);
@@ -172,7 +172,7 @@ client.on('interactionCreate', async (interaction) => {
 
         } catch (error) {
             console.error(error);
-            await interaction.followUp({ content: '❌ תקלה בהזרמת השיר, אנא נסה שוב.', ephemeral: true });
+            await interaction.followUp({ content: '❌ תקלה בהזרמת השמע, אנא נסה שוב.', ephemeral: true });
         }
     }
 });
