@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
+const { DisTube } = require('distube');
 
 const client = new Client({
     intents: [
@@ -9,11 +10,17 @@ const client = new Client({
     ]
 });
 
+// הגדרת מנוע השמעת המוזיקה בחדר הקולי
+const distube = new DisTube(client, {
+    leaveOnEmpty: true,
+    leaveOnFinish: false,
+    emitNewSongOnly: true,
+});
+
 const PREFIX = '!'; 
 
 client.once('ready', async () => {
-    console.log(`🤖 הבוט מוכן ומעודכן לשני הפאנלים המדויקים! מחובר בתור: ${client.user.tag}`);
-
+    console.log(`🤖 הבוט מוכן ומחובר לוויס! בתור: ${client.user.tag}`);
     const commands = [{ name: 'setup', description: 'מציג את פאנל השליטה הציבורי של הבוט' }];
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
@@ -54,7 +61,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
-        const selectedValue = interaction.values[0];
+        const selectedValue = interaction.values;
 
         const modal = new ModalBuilder()
             .setCustomId(`confirm_modal_${selectedValue}`)
@@ -74,7 +81,6 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isModalSubmit() && interaction.customId.startsWith('confirm_modal_')) {
         const style = interaction.customId.replace('confirm_modal_', '');
 
-        // תפריט 1: פאנל פשוט ומדויק מהתמונה האחרונה שלך
         if (style === 'style_simple') {
             const embedSimple = new EmbedBuilder()
                 .setColor('#5865f2')
@@ -90,7 +96,6 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ embeds: [embedSimple], components: [row], ephemeral: true });
         }
 
-        // תפריט 2: פאנל מתקדם ומדויק מהתמונה הקודמת שלך
         if (style === 'style_advanced') {
             const embedAdvanced = new EmbedBuilder()
                 .setColor('#23a55a')
@@ -109,6 +114,8 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isButton()) {
+        const queue = distube.getQueue(interaction.guildId);
+
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
@@ -121,13 +128,60 @@ client.on('interactionCreate', async (interaction) => {
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
             return await interaction.showModal(modalSong);
         }
+
+        // הפעלת לוגיקת כפתורי השמע בוויס האמיתי!
         await interaction.deferUpdate();
+
+        if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
+            if (!queue) return;
+            if (queue.paused) distube.resume(interaction.guildId);
+            else distube.pause(interaction.guildId);
+        }
+
+        if (interaction.customId === 'btn_adv_resume') {
+            if (queue && queue.paused) distube.resume(interaction.guildId);
+        }
+
+        if (interaction.customId === 'btn_skip' || interaction.customId === 'btn_adv_next') {
+            if (queue) {
+                try { await distube.skip(interaction.guildId); } catch (e) {}
+            }
+        }
+
+        if (interaction.customId === 'btn_stop' || interaction.customId === 'btn_adv_clear_leave') {
+            if (queue) distube.stop(interaction.guildId);
+        }
     }
 
+    // קבלת שם השיר מהחלונית, כניסה לוויס וניגון השיר בפועל!
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
-        return await interaction.reply({ content: `🔍 מחפש ומזרים מיוטיוב עבורך: **${songName}**`, ephemeral: true });
+        const voiceChannel = interaction.member.voice.channel;
+
+        if (!voiceChannel) {
+            return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן כדי שהבוט ייכנס אליך!', ephemeral: true });
+        }
+
+        await interaction.reply({ content: `🔍 מחפש ונכנס לוויס לנגן את: **${songName}**...`, ephemeral: true });
+
+        try {
+            await distube.play(voiceChannel, songName, {
+                textChannel: interaction.channel,
+                member: interaction.member
+            });
+        } catch (error) {
+            console.error(error);
+        }
     }
+});
+
+// עדכונים ציבוריים בצ'אט הכללי כשהשיר מתחיל
+distube.on('playSong', (queue, song) => {
+    queue.textChannel.send(`🎶 מזרים עכשיו בחדר הקולי: **${song.name}** [${song.formattedDuration}]\nהופעל על ידי: ${song.user}`);
+});
+
+distube.on('addSong', (queue, song) => {
+    queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`);
 });
 
 client.login(process.env.TOKEN);
