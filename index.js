@@ -102,7 +102,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setTitle('⚡ Advanced Quick-Actions Panel')
                 .setDescription('פעולות שליטה מתקדמות ומהירות בנגן:');
 
-            const playBtn2 = new ButtonBuilder().setCustomId('btn_adv_play').setLabel('חפש ונגן שיר 🎵').setStyle(ButtonStyle.Success);
+            const playBtn2 = new ButtonBuilder().setCustomId('btn_adv_play').setLabel('חפש וגן שיר 🎵').setStyle(ButtonStyle.Success);
             const pauseBtn2 = new ButtonBuilder().setCustomId('btn_adv_pause').setLabel('השהה ⏸️').setStyle(ButtonStyle.Secondary);
             const resumeBtn2 = new ButtonBuilder().setCustomId('btn_adv_resume').setLabel('המשך ▶️').setStyle(ButtonStyle.Success);
             const nextBtn2 = new ButtonBuilder().setCustomId('btn_adv_next').setLabel('הבא בתור ⏭️').setStyle(ButtonStyle.Primary);
@@ -129,7 +129,6 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.showModal(modalSong);
         }
 
-        // הפעלת לוגיקת כפתורי השמע בוויס האמיתי!
         await interaction.deferUpdate();
 
         if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
@@ -153,7 +152,6 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    // קבלת שם השיר מהחלונית, כניסה לוויס וניגון השיר בפועל!
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
         const voiceChannel = interaction.member.voice.channel;
@@ -175,13 +173,17 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// עדכונים ציבוריים בצ'אט הכללי כשהשיר מתחיל
+// תיקון קריטי למבנה האירועים של DisTube גרסה 4
 distube.on('playSong', (queue, song) => {
-    queue.textChannel.send(`🎶 מזרים עכשיו בחדר הקולי: **${song.name}** [${song.formattedDuration}]\nהופעל על ידי: ${song.user}`);
+    if (queue && queue.textChannel) {
+        queue.textChannel.send(`🎶 מזרים עכשיו בחדר הקולי: **${song.name}** [${song.formattedDuration}]\nהופעל על ידי: ${song.user}`).catch(e => console.error(e));
+    }
 });
 
 distube.on('addSong', (queue, song) => {
-    queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`);
+    if (queue && queue.textChannel) {
+        queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`).catch(e => console.error(e));
+    }
 });
 
 client.login(process.env.TOKEN);
