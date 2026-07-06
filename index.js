@@ -173,7 +173,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
 
-            } catch (error) {
+              } catch (error) {
         console.error(error);
         await interaction.followUp({ content: '❌ אירעה שגיאה...', ephemeral: true });
     }
