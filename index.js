@@ -21,16 +21,20 @@ client.on('ready', () => {
 function createMasterPanel() {
     const embed = new EmbedBuilder()
         .setColor('#2b2d31')
-        .setTitle('🗃️ Master Control Panel')
-        .setDescription('ברוך הבא לפאנל השליטה של בוט המוזיקה.nפתח את התפריט למטה ובחר את סגנון השליטה המועדף עליך');
+        .setTitle('Master Control Panel')
+        .setDescription('נהל את המוזיקה לשרת בצורה הנוחה ביותר, בחר מסגנונות המוזיקה הבאים או לחץ על הכפתורים המהירים למטה לפי הנוחיות שלך');
 
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('select_panel_style')
-        .setPlaceholder('⚡ Advanced (Quick-Actions)')
+        .setPlaceholder('Advanced (Quick-Actions)')
         .addOptions([
-            { label 'Simple (User-Friendly)', description 'פאנל שליטה בסיסי ונוח למשתמש', value 'style_simple', emoji '🎵' },
-            { label 'Advanced (Quick-Actions)', description 'פאנל פעולות מהירות לשליטה מלאה', value 'style_advanced', emoji '⚡' },
+            { label: 'Simple (User-Friendly)', description: 'להפעלת השיר בצורה פשוטה', value: 'style_simple', emoji: '🎵' },
+            { label: 'Advanced (Quick-Actions)', description: 'אפשרויות פאנל מתקדם', value: 'style_advanced', emoji: '⚡' }
         ]);
+
+    return { embeds: [embed], components: [new ActionRowBuilder().addComponents(selectMenu)] };
+}
+
 
     return { embeds [embed], components [new ActionRowBuilder().addComponents(selectMenu)] };
 }
