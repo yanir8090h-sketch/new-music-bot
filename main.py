@@ -180,5 +180,6 @@ async def p(ctx):
 async def on_ready():
     print(f"מחובר בתור {bot.user}")
 
+import os
 
-bot.run("הטוקן שלך")
+bot.run(os.getenv("TOKEN"))
