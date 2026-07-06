@@ -164,7 +164,7 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             // שימוש ב-StreamType.Arbitrary שמכריח את דיסקורד להזרים את השמע ישירות מהשרת ללא קריסות
-                      const ffmpeg = require('ffmpeg-static');
+        const ffmpeg = require('ffmpeg-static');
         const resource = createAudioResource(streamUrl, {
             inputType: StreamType.Arbitrary,
             executablePath: ffmpeg
@@ -173,7 +173,7 @@ client.on('interactionCreate', async (interaction) => {
         player.play(resource);
         connection.subscribe(player);
 
-      await interaction.reply({ content: `🎶 הבוט מזרים כעת...`, ephemeral: true });
+      await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול "${choiceName}" מותאם בבטחה ופותח את ערוץ השמע על ידי: ${interaction.user}`, ephemeral: true });
 
 
        
