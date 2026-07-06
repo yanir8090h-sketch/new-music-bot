@@ -1,5 +1,6 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
+const ytdl = require('@distube/ytdl-core');
 
 const client = new Client({
     intents: [
@@ -15,7 +16,7 @@ let connection = null;
 let player = null;
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן והסאונד תוקן סופית! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן ומעודכן ב-GitHub לשמע חסין! מחובר בתור: ${client.user.tag}`);
 });
 
 function createMasterPanel() {
@@ -104,9 +105,9 @@ client.on('interactionCreate', async (interaction) => {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('הקש פופ / היפ הופ / גלגלצ / רדיו:')
+                .setLabel('הדבק קישור ישיר ליוטיוב:')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: גלגלצ')
+                .setPlaceholder('https://youtube.com...')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -131,14 +132,18 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
-        const songName = interaction.fields.getTextInputValue('song_name_input').toLowerCase();
+        const songUrl = interaction.fields.getTextInputValue('song_name_input');
         const voiceChannel = interaction.member.voice.channel;
 
         if (!voiceChannel) {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🎵 מתחבר בבטחה ופותח את ערוץ השמע...`, ephemeral: true });
+        if (!ytdl.validateURL(songUrl)) {
+            return await interaction.reply({ content: '❌ נא להזין קישור מלא ותקין של יוטיוב בלבד!', ephemeral: true });
+        }
+
+        await interaction.reply({ content: `🎵 מתחבר בבטחה לערוץ ומזרים את השיר דרך הצינור החסין...`, ephemeral: true });
 
         try {
             connection = joinVoiceChannel({
@@ -151,31 +156,30 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // כתובות ישירות של שרתי מדיה רשמיים (לא נחסמים ועוקפים את באג ההצפנה)
-            let streamUrl = 'https://live.vc'; // פופ עולמי
-            let choiceName = 'Pop Hits Live';
+            // יצירת הזרמת שמע דינמית ישירות דרך קוד ההצפנה העוקף חסימות ענן
+            const stream = ytdl(songUrl, { 
+                filter: 'audioonly', 
+                highWaterMark: 1 << 25,
+                liveBuffer: 40000
+            });
 
-            if (songName.includes('גלגלצ') || songName.includes('mizrahit') || songName.includes('מזרחית')) {
-                streamUrl = 'https://rlive.co.il'; // גלגלצ דיגיטלי
-                choiceName = 'רדיו גלגלצ 📻';
-            } else if (songName.includes('היפ הופ') || songName.includes('hip hop')) {
-                streamUrl = 'https://live.vc'; // היפ הופ
-                choiceName = 'Hip Hop Hits Live';
-            }
-
-            // שימוש ב-StreamType.Arbitrary שמכריח את דיסקורד להזרים את השמע ללא צורך במפענחים מקומיים
-            const resource = createAudioResource(streamUrl, { inputType: StreamType.Arbitrary }); 
+            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary }); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 הבוט מזרים כעת בהצלחה בחדר הקולי: **${choiceName}** באיכות HD!\nהופעל על ידי: ${interaction.user}`);
+            // משיכת פרטי השיר
+            const info = await ytdl.getBasicInfo(songUrl);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${info.videoDetails.title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
-            await interaction.followUp({ content: '❌ תקלה בפתיחת ערוץ השמע המאובטח.', ephemeral: true });
+            await interaction.followUp({ content: '❌ תקלה בהזרמת השיר, אנא נסה שוב בעוד כמה שניות.', ephemeral: true });
         }
     }
 });
+
+client.on('error', console.error);
+process.on('unhandledRejection', console.error);
 
 client.login(process.env.TOKEN);
