@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
-const ytdlm = require('ytdl-core-muxer');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior } = require('@discordjs/voice');
+const play = require('play-dl');
 
 const client = new Client({
     intents: [
@@ -105,9 +105,9 @@ client.on('interactionCreate', async (interaction) => {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('רשום שם של שיר (לדוגמה: אושר כהן):')
+                .setLabel('הקש את שם השיר שאתה רוצה לנגן (בלי קישור):')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('תרשום שם של שיר רגיל ללא קישור...')
+                .setPlaceholder('לדוגמה: אושר כהן - תרקדי')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -142,30 +142,33 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: `🔍 מחפש ביוטיוב ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // התחברות קשיחה לוויס
+            // 1. חיפוש חופשי לפי שם השיר
+            const yt_results = await play.search(songName, { limit: 1 });
+            if (!yt_results || yt_results.length === 0) {
+                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
+            }
+
+            const track = yt_results[0]; // תיקון קריטי: משיכת השיר הראשון מתוך המערך בצורה מדויקת!
+
+            // 2. התחברות קשיחה ויציבה לוויס
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
 
+            // 3. יצירת הזרמת שמע דינמית ישירות מיוטיוב
+            const stream = await play.stream(track.url);
             player = createAudioPlayer({
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // שימוש במנוע הצינור החסוי כדי לעקוף את החסימה הדיגיטלית של יוטיוב!
-            const info = await ytdlm.search(songName);
-            if (!info || info.length === 0) {
-                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
-            }
-
-            const stream = await ytdlm.toggle(info[0].url, { filter: 'audioonly' });
-            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary }); 
+            const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${info[0].title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה על ידי שם השיר!`);
 
         } catch (error) {
             console.error(error);
