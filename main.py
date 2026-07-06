@@ -1,85 +1,69 @@
-import os
 import discord
 from discord.ext import commands
+import asyncio
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-
-class MusicSelect(discord.ui.Select):
-    def __init__(self):
-        options = [
-            discord.SelectOption(
-                label="פאנל פשוט",
-                description="פאנל בסיסי למשתמשים",
-                emoji="🎵"
-            ),
-            discord.SelectOption(
-                label="פאנל מתקדם",
-                description="פאנל עם כל האפשרויות",
-                emoji="⚡"
-            )
-        ]
-
-        super().__init__(
-            placeholder="בחר סוג פאנל...",
-            options=options
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title="🎶 Music Panel",
-            description=f"בחרת: **{self.values[0]}**",
-            color=discord.Color.blue()
-        )
-
-        await interaction.response.edit_message(embed=embed, view=MusicView())
+# 🎵 רשימת שירים (אפשר להחליף קישורים)
+SONGS = {
+    "שיר 1": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    "שיר 2": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+    "שיר 3": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+}
 
 
 class MusicView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(MusicSelect())
+        super().__init__()
 
-    @discord.ui.button(label="▶ נגן", style=discord.ButtonStyle.green)
-    async def play(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("▶ לחצת על נגן", ephemeral=True)
-
-    @discord.ui.button(label="⏸ השהה", style=discord.ButtonStyle.blurple)
-    async def pause(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("⏸ לחצת על השהה", ephemeral=True)
-
-    @discord.ui.button(label="⏭ דלג", style=discord.ButtonStyle.gray)
-    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("⏭ לחצת על דלג", ephemeral=True)
-
-    @discord.ui.button(label="⏹ עצור", style=discord.ButtonStyle.red)
-    async def stop(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("⏹ לחצת על עצור", ephemeral=True)
+        for name in SONGS:
+            self.add_item(MusicButton(name))
 
 
-@bot.event
-async def on_ready():
-    print(f"✅ {bot.user} מחובר!")
+class MusicButton(discord.ui.Button):
+    def __init__(self, song_name):
+        super().__init__(label=song_name, style=discord.ButtonStyle.primary)
+        self.song_name = song_name
+
+    async def callback(self, interaction: discord.Interaction):
+        url = SONGS[self.song_name]
+
+        voice_channel = interaction.user.voice.channel if interaction.user.voice else None
+
+        if not voice_channel:
+            await interaction.response.send_message("אתה חייב להיות ב־Voice!", ephemeral=True)
+            return
+
+        vc = interaction.guild.voice_client
+
+        if vc and vc.is_connected():
+            await vc.move_to(voice_channel)
+        else:
+            vc = await voice_channel.connect()
+
+        vc.stop()
+
+        source = discord.FFmpegPCMAudio(url)
+        vc.play(source)
+
+        await interaction.response.send_message(f"▶ מנגן עכשיו: {self.song_name}")
 
 
-@bot.command(name="setup")
-@commands.has_permissions(administrator=True)
-async def setup(ctx):
-    embed = discord.Embed(
-        title="🎵 Music Control Panel",
-        description="בחר אפשרות מהתפריט למטה.",
-        color=discord.Color.blue()
-    )
-
-    await ctx.send(embed=embed, view=MusicView())
+@bot.command()
+async def music(ctx):
+    await ctx.send("בחר שיר:", view=MusicView())
 
 
-TOKEN = os.getenv("TOKEN")
+@bot.command()
+async def stop(ctx):
+    vc = ctx.voice_client
+    if vc:
+        await vc.disconnect()
+        await ctx.send("⛔ עצרתי ויצאתי מהחדר")
 
-if not TOKEN:
-    print("❌ TOKEN לא נמצא")
-else:
-    bot.run(TOKEN)
+
+bot.run("PUT_YOUR_TOKEN_HERE")
