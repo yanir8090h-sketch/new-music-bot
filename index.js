@@ -177,4 +177,4 @@ distube.on('addSong', (queue, song) => {
 });
 
 // קריאה מאובטחת לטוקן מתוך המערכת של Railway
-client.login(TOKEN);
+client.login(process.env.TOKEN);
