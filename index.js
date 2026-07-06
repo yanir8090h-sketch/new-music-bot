@@ -164,11 +164,13 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             // שימוש ב-StreamType.Arbitrary שמכריח את דיסקורד להזרים את השמע ישירות מהשרת ללא קריסות
-        const ffmpeg = require('ffmpeg-static');
+                const ffmpeg = require('ffmpeg-static');
+        const { StreamType } = require('@discordjs/voice');
         const resource = createAudioResource(streamUrl, {
             inputType: StreamType.Arbitrary,
             executablePath: ffmpeg
         });
+
 
         player.play(resource);
         connection.subscribe(player);
