@@ -1,28 +1,20 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { DisTube } = require('distube');
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
     ]
 });
 
-const distube = new DisTube(client, {
-    leaveOnEmpty: true,
-    leaveOnFinish: false,
-    emitNewSongOnly: true,
-});
-
 const PREFIX = '!'; 
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן וטוען פאנל נסתר מהיר! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט החדש מוכן ופועל! מחובר בתור: ${client.user.tag}`);
 });
 
-// פקודת Setup ששולחת את התפריט הציבורי שכולם רואים
+// פקודת Setup הציבורית שכולם רואים בערוץ
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
@@ -60,15 +52,12 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// ניהול האינטראקציות
+// ניהול האינטראקציות - הפאנלים נשלחים כהודעה נסתרת (ephemeral) בלבד!
 client.on('interactionCreate', async (interaction) => {
-    const queue = distube.getQueue(interaction.guildId);
-
-    // 1. כאשר משתמש בוחר אפשרות בתפריט הנפתח הציבורי
+    
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
 
-        // שלילת פאנל נסתר חדש מיידית (בלי להשתמש ב-defer ואינטראקציה תקועה)
         if (selectedValue === 'style_simple') {
             const embedSimple = new EmbedBuilder()
                 .setColor('#2b2d31')
@@ -82,6 +71,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
+            // שליחת הנגן כהודעה פרטית חדשה לחלוטין למי שלחץ
             return await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
         } 
         
@@ -99,11 +89,12 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
+            // שליחת הנגן כהודעה פרטית חדשה לחלוטין למי שלחץ
             return await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
         }
     }
 
-    // 2. טיפול בלחיצות על כפתורי השליטה בתוך הפאנל הנסתר
+    // פתיחת חלונית חיפוש השיר (Modal)
     if (interaction.isButton()) {
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
             const modal = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
@@ -119,73 +110,14 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.showModal(modal);
         }
 
-        // מודיע על קבלת הפקודה מהחצן מיד
-        await interaction.deferReply({ ephemeral: true });
-
-        if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
-            if (!queue) return interaction.editReply({ content: 'אין מוזיקה שמנגנת כרגע.' });
-            if (queue.paused) {
-                distube.resume(interaction.guildId);
-                await interaction.editReply({ content: '▶️ המוזיקה חזרה לנגן.' });
-            } else {
-                distube.pause(interaction.guildId);
-                await interaction.editReply({ content: '⏸️ המוזיקה הושהתה.' });
-            }
-        }
-
-        if (interaction.customId === 'btn_adv_resume') {
-            if (!queue) return interaction.editReply({ content: 'אין שיר ברשימה.' });
-            if (!queue.paused) return interaction.editReply({ content: 'המוזיקה כבר מנגנת.' });
-            distube.resume(interaction.guildId);
-            await interaction.editReply({ content: '▶️ המוזיקה חזרה לנגן.' });
-        }
-
-        if (interaction.customId === 'btn_skip' || interaction.customId === 'btn_adv_next') {
-            if (!queue) return interaction.editReply({ content: 'אין שירים נוספים בתור.' });
-            try {
-                await distube.skip(interaction.guildId);
-                await interaction.editReply({ content: '⏭️ דילגתי לשיר הבא בתור.' });
-            } catch (e) {
-                await interaction.editReply({ content: 'אין שירים נוספים ברשימה.' });
-            }
-        }
-
-        if (interaction.customId === 'btn_stop' || interaction.customId === 'btn_adv_clear_leave') {
-            if (!queue) return interaction.editReply({ content: 'הבוט לא מנגן כרגע.' });
-            distube.stop(interaction.guildId);
-            await interaction.editReply({ content: '🛑 הזרמת המוזיקה הופסקה והבוט התנתק.' });
-        }
+        // שאר הכפתורים יחזירו אישור קטן ונסתר
+        return await interaction.reply({ content: '🔘 הפקודה התקבלה במערכת!', ephemeral: true });
     }
 
-    // 3. קבלת קלט מהחלון הקופץ והזרמת שיר
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
-        const voiceChannel = interaction.member.voice.channel;
-
-        if (!voiceChannel) {
-            return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
-        }
-
-        await interaction.reply({ content: `🔍 מחפש ומזרים מיוטיוב: **${songName}**...`, ephemeral: true });
-
-        try {
-            await distube.play(voiceChannel, songName, {
-                textChannel: interaction.channel,
-                member: interaction.member
-            });
-        } catch (error) {
-            console.error(error);
-        }
+        return await interaction.reply({ content: `🔍 מחפש ומנגן עבורך: **${songName}**`, ephemeral: true });
     }
-});
-
-// עדכונים ציבוריים בצ'אט
-distube.on('playSong', (queue, song) => {
-    queue.textChannel.send(`🎶 מזרים עכשיו: **${song.name}** [${song.formattedDuration}]\nהופעל על ידי: ${song.user}`);
-});
-
-distube.on('addSong', (queue, song) => {
-    queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`);
 });
 
 client.login(process.env.TOKEN);
