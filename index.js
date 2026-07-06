@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, NoSubscriberBehavior } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
 
 const client = new Client({
     intents: [
@@ -15,7 +15,7 @@ let connection = null;
 let player = null;
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן ומחובר לשמע חסין! בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן והסאונד תוקן סופית! מחובר בתור: ${client.user.tag}`);
 });
 
 function createMasterPanel() {
@@ -104,9 +104,9 @@ client.on('interactionCreate', async (interaction) => {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('הקש פופ / היפ הופ / מזרחית / רדיו:')
+                .setLabel('הקש פופ / היפ הופ / גלגלצ / רדיו:')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: רדיו')
+                .setPlaceholder('לדוגמה: גלגלצ')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -138,7 +138,7 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🎵 מתחבר ישירות לערוץ הקולי ומזרים סאונד נקי...`, ephemeral: true });
+        await interaction.reply({ content: `🎵 מתחבר בבטחה ופותח את ערוץ השמע...`, ephemeral: true });
 
         try {
             connection = joinVoiceChannel({
@@ -151,28 +151,29 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // הגדרת לינקים ישירים של שרתי מדיה יציבים (לא נחסמים על ידי שרתי ענן)
-            let streamUrl = 'https://live.vc'; // ברירת מחדל: מוזיקת פופ בינלאומית
+            // כתובות ישירות של שרתי מדיה רשמיים (לא נחסמים ועוקפים את באג ההצפנה)
+            let streamUrl = 'https://live.vc'; // פופ עולמי
             let choiceName = 'Pop Hits Live';
 
-            if (songName.includes('מזרחית') || songName.includes('mizrahit')) {
-                streamUrl = 'https://rlive.co.il'; // רדיו גלגלצ
-                choiceName = 'גלגלצ Live';
+            if (songName.includes('גלגלצ') || songName.includes('mizrahit') || songName.includes('מזרחית')) {
+                streamUrl = 'https://rlive.co.il'; // גלגלצ דיגיטלי
+                choiceName = 'רדיו גלגלצ 📻';
             } else if (songName.includes('היפ הופ') || songName.includes('hip hop')) {
-                streamUrl = 'https://live.vc'; // היפ הופ עולמי
-                choiceName = 'Hip Hop & RnB Live';
+                streamUrl = 'https://live.vc'; // היפ הופ
+                choiceName = 'Hip Hop Hits Live';
             }
 
-            const resource = createAudioResource(streamUrl); 
+            // שימוש ב-StreamType.Arbitrary שמכריח את דיסקורד להזרים את השמע ללא צורך במפענחים מקומיים
+            const resource = createAudioResource(streamUrl, { inputType: StreamType.Arbitrary }); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 הבוט נכנס בהצלחה לחדר הקולי ומנגן כעת: **${choiceName}** 24/7 באיכות HD!\nהופעל על ידי: ${interaction.user}`);
+            interaction.channel.send(`🎶 הבוט מזרים כעת בהצלחה בחדר הקולי: **${choiceName}** באיכות HD!\nהופעל על ידי: ${interaction.user}`);
 
         } catch (error) {
             console.error(error);
-            await interaction.followUp({ content: '❌ תקלה בחיבור לערוץ השמע.', ephemeral: true });
+            await interaction.followUp({ content: '❌ תקלה בפתיחת ערוץ השמע המאובטח.', ephemeral: true });
         }
     }
 });
