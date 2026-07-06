@@ -1,4 +1,4 @@
-\const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { DisTube } = require('distube');
 
 const client = new Client({
@@ -66,7 +66,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // 1. כאשר משתמש בוחר אפשרות בתפריט הנפתח הציבורי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
-        const selectedValue = interaction.values[0];
+        const selectedValue = interaction.values;
 
         // חובה להודיע לדיסקורד מיד כדי למנוע את השגיאה האדומה באופן מיידי!
         await interaction.deferReply({ ephemeral: true });
