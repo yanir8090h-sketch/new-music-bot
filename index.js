@@ -19,10 +19,10 @@ const distube = new DisTube(client, {
 const PREFIX = '!'; 
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן ומעודכן לפאנל נסתר! מחובר בתור: ${client.user.tag}`);
 });
 
-// פקודת setup ציבורית - כולם רואים את התפריט הראשי הזה
+// פקודת Setup ששולחת את התפריט הציבורי שכולם רואים
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
@@ -64,7 +64,7 @@ client.on('messageCreate', async (message) => {
 client.on('interactionCreate', async (interaction) => {
     const queue = distube.getQueue(interaction.guildId);
 
-    // 1. כאשר מישהו בוחר אפשרות בתפריט הראשי
+    // 1. בחירת פאנל מתוך התפריט הציבורי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
 
@@ -81,7 +81,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
-            // שימוש ב-reply עם ephemeral: true -> שולח את הנגן כהודעה פרטית ונסתרת רק למי שלחץ!
+            // שולח הודעה חדשה ונסתרת (ephemeral) במקום לערוך את הישנה
             await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
         } 
         
@@ -99,12 +99,12 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
-            // שימוש ב-reply עם ephemeral: true -> שולח את הנגן כהודעה פרטית ונסתרת רק למי שלחץ!
+            // שולח הודעה חדשה ונסתרת (ephemeral) במקום לערוך את הישנה
             await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
         }
     }
 
-    // 2. טיפול בכפתורי השליטה (נמצאים בתוך ההודעה הנסתרת)
+    // 2. כפתורי שליטה (בתוך ההודעה הנסתרת)
     if (interaction.isButton()) {
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
             const modal = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
@@ -120,7 +120,6 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.showModal(modal);
         }
 
-        // שימוש ב-deferReply כדי לענות לכפתורים האחרים בצורה נסתרת ומהירה
         await interaction.deferReply({ ephemeral: true });
 
         if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
@@ -158,7 +157,7 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    // 3. קבלת שם השיר מהחלון הקופץ והזרמתו
+    // 3. חלון קופץ
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
         const voiceChannel = interaction.member.voice.channel;
@@ -180,7 +179,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// הודעות מערכת כלליות בערוץ כשהשירים מתחלפים (גלוי לכולם כדי שידעו מה מנגן עכשיו)
+// עדכונים ציבוריים
 distube.on('playSong', (queue, song) => {
     queue.textChannel.send(`🎶 מזרים עכשיו: **${song.name}** [${song.formattedDuration}]\nהופעל על ידי: ${song.user}`);
 });
