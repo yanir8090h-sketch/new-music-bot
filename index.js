@@ -151,17 +151,13 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
 
                     
-     try {
-        // חיפוש השיר ישירות ביוטיוב באמצעות play-dl
-        let yt_info = await playdl.search(songName, { limit: 1 });
+             let yt_info = await playdl.search(songName, { limit: 1 });
         if (!yt_info || yt_info.length === 0) {
             return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
         }
 
-        // לקיחת הסרטון הראשון שנמצא ברשימה
         const video = yt_info[0];
 
-        // הזרמת השמע מהסרטון
         let stream = await playdl.stream(video.url);
         const resource = createAudioResource(stream.stream, {
             inputType: stream.type,
@@ -177,6 +173,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error(error);
         await interaction.editReply({ content: '❌ אירעה שגיאה בהפעלת השיר!', ephemeral: true });
     }
+
 
 
 
