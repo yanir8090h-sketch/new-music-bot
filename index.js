@@ -140,25 +140,16 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.reply({ content: `🎵 מתחבר בבטחה ופותח את ערוץ השמע...`, ephemeral: true });
 
-        try {
-            connection = joinVoiceChannel({
-                channelId: voiceChannel.id,
-                guildId: voiceChannel.guild.id,
-                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-            });
 
-            player = createAudioPlayer({
-                behaviors: { noSubscriber: NoSubscriberBehavior.Play }
 
-                    
-             let yt_info = await playdl.search(songName, { limit: 1 });
+               let yt_info = await play.search(songName, { limit: 1 });
         if (!yt_info || yt_info.length === 0) {
             return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
         }
 
-        const video = yt_info[0];
+        const video = yt_info;
 
-        let stream = await playdl.stream(video.url);
+        let stream = await play.stream(video.url);
         const resource = createAudioResource(stream.stream, {
             inputType: stream.type,
             inlineVolume: true
@@ -173,6 +164,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error(error);
         await interaction.editReply({ content: '❌ אירעה שגיאה בהפעלת השיר!', ephemeral: true });
     }
+
 
 
 
