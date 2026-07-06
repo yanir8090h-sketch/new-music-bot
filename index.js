@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior } = require('@discordjs/voice');
 const play = require('play-dl');
 
 const client = new Client({
@@ -55,7 +55,7 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async (interaction) => {
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
-        const selectedValue = interaction.values;
+        const selectedValue = interaction.values[0];
 
         const modal = new ModalBuilder()
             .setCustomId(`confirm_modal_${selectedValue}`)
@@ -155,8 +155,12 @@ client.on('interactionCreate', async (interaction) => {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            // תיקון סופי: בחירה מדויקת של האיבר הראשון במערך התוצאות
-            const track = results[0]; 
+            // תיקון יציב: בחירה בטוחה של תוצאת החיפוש בין אם היא מערך או אובייקט ישיר
+            const track = Array.isArray(results) ? results[0] : results; 
+
+            if (!track || !track.url) {
+                return await interaction.followUp({ content: '❌ תקלה בשאיבת נתוני השיר.', ephemeral: true });
+            }
 
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
@@ -174,7 +178,7 @@ client.on('interactionCreate', async (interaction) => {
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title || track.name || songName}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
