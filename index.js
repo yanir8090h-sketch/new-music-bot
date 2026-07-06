@@ -86,25 +86,22 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.deferReply({ ephemeral: true });
 
-        try {
-            const connection = joinVoiceChannel({
-                channelId: voiceChannel.id,
-                guildId: voiceChannel.guild.id,
-                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-            });
+                  const play = require('play-dl');
             
-                       // חיפוש השיר ב-SoundCloud שעוקף את החסימות של יוטיוב בשרתים
-           const play = require('play-dl');
-let sc_info = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
-            if (!sc_info || sc_info.length === 0) {
+            // חיפוש חלופי ויציב ביוטיוב שלא נחסם בגרסה הזו
+            let yt_info = await play.search(songName, { limit: 1 });
+            if (!yt_info || yt_info.length === 0) {
                 return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
             }
 
-            const track = sc_info.shift();
-                        let stream = await play.stream(track.url);
+            const video = yt_info[0];
+
+            let stream = await play.stream(video.url);
             const resource = createAudioResource(stream.stream, {
+                inputType: stream.type,
                 inlineVolume: true
             });
+
 
 
 
