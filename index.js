@@ -91,20 +91,18 @@ client.on('interactionCreate', async (interaction) => {
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
 
-            const player = createAudioPlayer();
+                       const ytdl = require('ytdl-core');
 
-                                 let yt_info = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
-            if (!yt_info || yt_info.length === 0) {
-                return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
-            }
+            // הזרמת השמע ישירות מיוטיוב באמצעות החיפוש שכבר עובד
+            let stream = ytdl(`https://youtube.com{songName}`, {
+                filter: 'audioonly',
+                highWaterMark: 1 << 25
+            });
 
-            const video = yt_info[0];
-
-            let stream = await play.stream(video.url);
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
+            const resource = createAudioResource(stream, {
                 inlineVolume: true
             });
+
 
 
             connection.subscribe(player);
