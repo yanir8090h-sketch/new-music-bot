@@ -96,13 +96,14 @@ client.on('interactionCreate', async (interaction) => {
                 return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
             }
 
-            const video = yt_info[0];
+            const video = yt_info.shift();
 
             let stream = await play.stream(video.url);
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type,
                 inlineVolume: true
             });
+            
 
 
 
