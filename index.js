@@ -167,17 +167,11 @@ client.on('interactionCreate', async (interaction) => {
 
         await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${video.title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
 
-    } catch (error) {
-        console.error(error);
-        await interaction.editReply({ content: '❌ אירעה שגיאה בהפעלת השיר!', ephemeral: true });
-    }
 
-
-          } catch (error) {
-        console.error(error);
-        await interaction.editReply({ content: '❌ אירעה שגיאה בהפעלת השיר!', ephemeral: true });
-    }
-});
+//    } catch (error) {
+//        console.error(error);
+//        await interaction.followUp({ content: '❌ אירעה שגיאה...', ephemeral: true });
+//    }
 
 
 client.login(process.env.TOKEN);
