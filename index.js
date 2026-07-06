@@ -18,7 +18,6 @@ let player = null;
 client.once('ready', async () => {
     console.log(`🤖 בוט המוזיקה החופשי מוכן ויציב! מחובר בתור: ${client.user.tag}`);
     
-    // תיקון קריטי: הפעלת מפתח הגישה החופשי של סאונדקלאוד כדי למנוע חסימות שמע
     try {
         await play.getFreeClientID();
         console.log("✅ מפתח הגישה של סאונדקלאוד הופעל בהצלחה!");
@@ -147,7 +146,7 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש ומזריר עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
             // חיפוש חופשי ומאובטח דרך מנוע SoundCloud (עוקף לחלוטין את החסימות של יוטיוב בענן)
@@ -177,7 +176,8 @@ client.on('interactionCreate', async (interaction) => {
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.name}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
+            // תיקון קריטי: החלפת track.name ב-track.title כדי למנוע את השגיאה לחלוטין
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
