@@ -1,28 +1,43 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildVoiceStates
     ]
 });
 
-const PREFIX = '!'; 
+// רישום פקודת הלוכסן (/setup) ברגע שהבוט נדלק ב-Railway
+client.once('ready', async () => {
+    console.log(`🤖 הבוט דלוק ויציב! מחובר בתור: ${client.user.tag}`);
 
-client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן ומעודכן לפאנל נסתר יציב! מחובר בתור: ${client.user.tag}`);
+    const commands = [
+        {
+            name: 'setup',
+            description: 'מציג את תפריט המאסטר הציבורי של הבוט',
+        }
+    ];
+
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+
+    try {
+        console.log('🔄 מרענן פקודות לוכסן (Slash Commands)...');
+        await rest.put(
+            Routes.applicationCommands(client.user.id),
+            { body: commands },
+        );
+        console.log('✅ פקודות הלוכסן עודכנו בהצלחה בשרת!');
+    } catch (error) {
+        console.error(error);
+    }
 });
 
-// פקודת Setup הציבורית (התפריט הראשי שכולם רואים)
-client.on('messageCreate', async (message) => {
-    if (message.author.bot || !message.content.startsWith(PREFIX)) return;
-
-    const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
-
-    if (command === 'setup') {
+// ניהול האינטראקציות
+client.on('interactionCreate', async (interaction) => {
+    
+    // 1. הפעלת פקודת /setup (ציבורית - כולם רואים אותה בערוץ)
+    if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
         const embed = new EmbedBuilder()
             .setColor('#2b2d31')
             .setTitle('🗃️ Master Control Panel')
@@ -32,35 +47,19 @@ client.on('messageCreate', async (message) => {
             .setCustomId('select_panel_style')
             .setPlaceholder('⚡ Advanced (Quick-Actions)')
             .addOptions([
-                { 
-                    label: 'Simple (User-Friendly)', 
-                    description: 'פאנל שליטה בסיסי ונוח למשתמש', 
-                    value: 'style_simple',
-                    emoji: '🎵'
-                },
-                { 
-                    label: 'Advanced (Quick-Actions)', 
-                    description: 'פאנל פעולות מהירות לשליטה מלאה', 
-                    value: 'style_advanced',
-                    emoji: '⚡'
-                },
+                { label: 'Simple (User-Friendly)', description: 'פאנל שליטה בסיסי ונוח למשתמש', value: 'style_simple', emoji: '🎵' },
+                { label: 'Advanced (Quick-Actions)', description: 'פאנל פעולות מהירות לשליטה מלאה', value: 'style_advanced', emoji: '⚡' },
             ]);
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
         
-        await message.delete().catch(() => {}); 
-        await message.channel.send({ embeds: [embed], components: [row] });
+        // שולח את התפריט הראשי לערוץ שכולם יוכלו לראות
+        return await interaction.reply({ embeds: [embed], components: [row] });
     }
-});
 
-// ניהול האינטראקציות
-client.on('interactionCreate', async (interaction) => {
-    
+    // 2. כאשר מישהו בוחר אפשרות בתפריט הראשי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
-
-        // 1. מודיע לדיסקורד מיד שקיבלנו את הלחיצה ומכין הודעה נסתרת (מונע לחלוטין את השגיאה האדומה!)
-        await interaction.deferReply({ ephemeral: true });
 
         if (selectedValue === 'style_simple') {
             const embedSimple = new EmbedBuilder()
@@ -75,8 +74,8 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
-            // 2. מעדכן את מצב ה"חשיבה" ומציג את הפאנל הנסתר מיד
-            return await interaction.editReply({ embeds: [embedSimple], components: [rowBtns] });
+            // שולח הודעה נסתרת (ephemeral) חדשה ומהירה בשבריר שנייה ללא מצב חשיבה!
+            return await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
         } 
         
         if (selectedValue === 'style_advanced') {
@@ -93,11 +92,12 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
-            // 2. מעדכן את מצב ה"חשיבה" ומציג את הפאנל הנסתר מיד
-            return await interaction.editReply({ embeds: [embedAdvanced], components: [rowBtns2] });
+            // שולח הודעה נסתרת (ephemeral) חדשה ומהירה בשבריר שנייה ללא מצב חשיבה!
+            return await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
         }
     }
 
+    // 3. טיפול בלחיצות על כפתורי השליטה בתוך הפאנל הנסתר
     if (interaction.isButton()) {
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
             const modal = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
@@ -113,12 +113,13 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.showModal(modal);
         }
 
+        // אישור מהיר ופנימי לכפתורים האחרים
         await interaction.deferUpdate();
     }
 
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
-        return await interaction.reply({ content: `🔍 מחפש ומזרים עבורך מיוטיוב: **${songName}**`, ephemeral: true });
+        return await interaction.reply({ content: `🔍 מחפש ומזרים מיוטיוב: **${songName}**`, ephemeral: true });
     }
 });
 
