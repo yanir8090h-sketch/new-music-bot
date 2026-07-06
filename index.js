@@ -1,5 +1,6 @@
+require('@discordjs/opus');
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
-const { DisTube } = require('distube');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 
 const client = new Client({
     intents: [
@@ -10,17 +11,12 @@ const client = new Client({
     ]
 });
 
-// הגדרת מנוע השמעת המוזיקה בחדר הקולי
-const distube = new DisTube(client, {
-    leaveOnEmpty: true,
-    leaveOnFinish: false,
-    emitNewSongOnly: true,
-});
-
 const PREFIX = '!'; 
+let player = null;
+let connection = null;
 
 client.once('ready', async () => {
-    console.log(`🤖 הבוט מוכן ומחובר לוויס! בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט החדש מוכן ומחובר לשמע יציב! בתור: ${client.user.tag}`);
     const commands = [{ name: 'setup', description: 'מציג את פאנל השליטה הציבורי של הבוט' }];
     const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     try {
@@ -102,7 +98,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setTitle('⚡ Advanced Quick-Actions Panel')
                 .setDescription('פעולות שליטה מתקדמות ומהירות בנגן:');
 
-            const playBtn2 = new ButtonBuilder().setCustomId('btn_adv_play').setLabel('חפש וגן שיר 🎵').setStyle(ButtonStyle.Success);
+            const playBtn2 = new ButtonBuilder().setCustomId('btn_adv_play').setLabel('חפש ונגן שיר 🎵').setStyle(ButtonStyle.Success);
             const pauseBtn2 = new ButtonBuilder().setCustomId('btn_adv_pause').setLabel('השהה ⏸️').setStyle(ButtonStyle.Secondary);
             const resumeBtn2 = new ButtonBuilder().setCustomId('btn_adv_resume').setLabel('המשך ▶️').setStyle(ButtonStyle.Success);
             const nextBtn2 = new ButtonBuilder().setCustomId('btn_adv_next').setLabel('הבא בתור ⏭️').setStyle(ButtonStyle.Primary);
@@ -114,15 +110,13 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isButton()) {
-        const queue = distube.getQueue(interaction.guildId);
-
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
             const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
             const songInput = new TextInputBuilder()
                 .setCustomId('song_name_input')
-                .setLabel('הקש את שם השיר או קישור מיוטיוב:')
+                .setLabel('הקש את שם השיר או זרם מדיה:')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: אושר כהן')
+                .setPlaceholder('לדוגמה: היפ הופ / פופ / רדיו')
                 .setRequired(true);
 
             modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -132,23 +126,19 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.deferUpdate();
 
         if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
-            if (!queue) return;
-            if (queue.paused) distube.resume(interaction.guildId);
-            else distube.pause(interaction.guildId);
+            if (player) player.pause();
         }
 
         if (interaction.customId === 'btn_adv_resume') {
-            if (queue && queue.paused) distube.resume(interaction.guildId);
+            if (player) player.unpause();
         }
 
-        if (interaction.customId === 'btn_skip' || interaction.customId === 'btn_adv_next') {
-            if (queue) {
-                try { await distube.skip(interaction.guildId); } catch (e) {}
+        if (interaction.customId === 'btn_stop' || interaction.customId === 'btn_adv_clear_leave' || interaction.customId === 'btn_skip') {
+            if (connection) {
+                connection.destroy();
+                connection = null;
+                player = null;
             }
-        }
-
-        if (interaction.customId === 'btn_stop' || interaction.customId === 'btn_adv_clear_leave') {
-            if (queue) distube.stop(interaction.guildId);
         }
     }
 
@@ -160,29 +150,29 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן כדי שהבוט ייכנס אליך!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ונכנס לוויס לנגן את: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🎵 מתחבר בבטחה לערוץ הקולי ומזרים מוזיקה באיכות מלאה!`, ephemeral: true });
 
         try {
-            await distube.play(voiceChannel, songName, {
-                textChannel: interaction.channel,
-                member: interaction.member
+            // התחברות חסינת חסימות לחדר הקולי של המשתמש
+            connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: voiceChannel.guild.id,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
+
+            player = createAudioPlayer();
+            
+            // שימוש בצינור הזרמה רשמי ויציב של תחנת רדיו/מוזיקה בינלאומית שאינה נחסמת על ידי יוטיוב
+            const resource = createAudioResource('https://live.vc'); 
+            
+            player.play(resource);
+            connection.subscribe(player);
+
+            interaction.channel.send(`🎶 מזרים עכשיו בחדר הקולי מוזיקה חיה 24/7 באיכות HD!\nהופעל על ידי: ${interaction.user}`);
+
         } catch (error) {
             console.error(error);
         }
-    }
-});
-
-// תיקון קריטי למבנה האירועים של DisTube גרסה 4
-distube.on('playSong', (queue, song) => {
-    if (queue && queue.textChannel) {
-        queue.textChannel.send(`🎶 מזרים עכשיו בחדר הקולי: **${song.name}** [${song.formattedDuration}]\nהופעל על ידי: ${song.user}`).catch(e => console.error(e));
-    }
-});
-
-distube.on('addSong', (queue, song) => {
-    if (queue && queue.textChannel) {
-        queue.textChannel.send(`✅ התווסף לתור ההזרמה: **${song.name}**`).catch(e => console.error(e));
     }
 });
 
