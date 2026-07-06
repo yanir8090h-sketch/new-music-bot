@@ -12,7 +12,7 @@ const client = new Client({
 const PREFIX = '!'; 
 
 client.once('ready', () => {
-    console.log(`🤖 הבוט מוכן וטוען פאנל נסתר מהיר! מחובר בתור: ${client.user.tag}`);
+    console.log(`🤖 הבוט מוכן ומעודכן לפאנל נסתר יציב! מחובר בתור: ${client.user.tag}`);
 });
 
 // פקודת Setup הציבורית (התפריט הראשי שכולם רואים)
@@ -53,13 +53,15 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// ניהול האינטראקציות - שליחת פאנל נסתר מהיר ללא זמני טעינה
+// ניהול האינטראקציות
 client.on('interactionCreate', async (interaction) => {
     
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
 
-        // שליחת הפאנל הפשוט בצורה נסתרת ומיידית ללא defer
+        // 1. מודיע לדיסקורד מיד שקיבלנו את הלחיצה ומכין הודעה נסתרת (מונע לחלוטין את השגיאה האדומה!)
+        await interaction.deferReply({ ephemeral: true });
+
         if (selectedValue === 'style_simple') {
             const embedSimple = new EmbedBuilder()
                 .setColor('#2b2d31')
@@ -73,10 +75,10 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
             
-            return await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
+            // 2. מעדכן את מצב ה"חשיבה" ומציג את הפאנל הנסתר מיד
+            return await interaction.editReply({ embeds: [embedSimple], components: [rowBtns] });
         } 
         
-        // שליחת הפאנל המתקדם בצורה נסתרת ומיידית ללא defer
         if (selectedValue === 'style_advanced') {
             const embedAdvanced = new EmbedBuilder()
                 .setColor('#23a55a')
@@ -91,7 +93,8 @@ client.on('interactionCreate', async (interaction) => {
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
             
-            return await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
+            // 2. מעדכן את מצב ה"חשיבה" ומציג את הפאנל הנסתר מיד
+            return await interaction.editReply({ embeds: [embedAdvanced], components: [rowBtns2] });
         }
     }
 
@@ -110,7 +113,6 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.showModal(modal);
         }
 
-        // עדכון פנימי מהיר לכפתורי השליטה האחרים
         await interaction.deferUpdate();
     }
 
