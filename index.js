@@ -89,3 +89,4 @@ async def musicpanel(ctx):
     )
 
     await ctx.send(embed=embed, view=MusicView())
+client.login(process.env.TOKEN);
