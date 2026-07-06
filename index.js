@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { DisTube } = require('distube');
 
 const client = new Client({
@@ -16,59 +16,55 @@ const distube = new DisTube(client, {
     emitNewSongOnly: true,
 });
 
-// רישום פקודת ה-Slash בדיסקורד ברגע שהבוט נדלק
-client.once('ready', async () => {
-    console.log(`🤖 הבוט מחובר בתור: ${client.user.tag}`);
+const PREFIX = '!'; 
 
-    const commands = [
-        {
-            name: 'setup',
-            description: 'מציג את פאנל השליטה הפרטי במוזיקה',
-        }
-    ];
+client.once('ready', () => {
+    console.log(`🤖 הבוט מוכן! מחובר בתור: ${client.user.tag}`);
+});
 
-    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+// פקודת setup ציבורית - כולם רואים את התפריט הראשי הזה
+client.on('messageCreate', async (message) => {
+    if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
-    try {
-        console.log('🔄 מעדכן פקודות לוכסן (Slash Commands)...');
-        await rest.put(
-            Routes.applicationCommands(client.user.id),
-            { body: commands },
-        );
-        console.log('✅ פקודות הלוכסן עודכנו בהצלחה!');
-    } catch (error) {
-        console.error(error);
+    const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'setup') {
+        const embed = new EmbedBuilder()
+            .setColor('#2b2d31')
+            .setTitle('🗃️ Master Control Panel')
+            .setDescription('ברוך הבא לפאנל השליטה של בוט המוזיקה.\nפתח את התפריט למטה ובחר את סגנון השליטה המועדף עליך:');
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('select_panel_style')
+            .setPlaceholder('⚡ Advanced (Quick-Actions)')
+            .addOptions([
+                { 
+                    label: 'Simple (User-Friendly)', 
+                    description: 'פאנל שליטה בסיסי ונוח למשתמש', 
+                    value: 'style_simple',
+                    emoji: '🎵'
+                },
+                { 
+                    label: 'Advanced (Quick-Actions)', 
+                    description: 'פאנל פעולות מהירות לשליטה מלאה', 
+                    value: 'style_advanced',
+                    emoji: '⚡'
+                },
+            ]);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+        
+        await message.delete().catch(() => {}); 
+        await message.channel.send({ embeds: [embed], components: [row] });
     }
 });
 
-// טיפול באינטראקציות (פקודות, תפריטים וכפתורים)
+// ניהול האינטראקציות
 client.on('interactionCreate', async (interaction) => {
     const queue = distube.getQueue(interaction.guildId);
 
-    // 1. הפעלת פקודת /setup
-    if (interaction.isChatInputCommand()) {
-        if (interaction.commandName === 'setup') {
-            const embed = new EmbedBuilder()
-                .setColor('#2b2d31')
-                .setTitle('🗃️ Master Control Panel')
-                .setDescription('ברוך הבא לפאנל השליטה של הבוט.\nפתח את התפריט למטה ובחר את סגנון השליטה המועדף עליך.');
-
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId('select_panel_style')
-                .setPlaceholder('🎵 Simple (User-Friendly)')
-                .addOptions([
-                    { label: 'Simple (User-Friendly)', description: 'פאנל שליטה בסיסי ונוח למשתמש', value: 'style_simple', emoji: '🎵' },
-                    { label: 'Advanced (Quick-Actions)', description: 'פאנל פעולות מהירות לשליטה מלאה', value: 'style_advanced', emoji: '⚡' },
-                ]);
-
-            const row = new ActionRowBuilder().addComponents(selectMenu);
-            
-            // ephemeral: true גורם לזה שרק מי שרשם את הפקודה יראה את התפריט!
-            await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
-        }
-    }
-
-    // 2. החלפת תצוגה בתפריט הנפתח (מעדכן את ההודעה הנסתרת)
+    // 1. כאשר מישהו בוחר אפשרות בתפריט הראשי
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
         const selectedValue = interaction.values;
 
@@ -84,7 +80,9 @@ client.on('interactionCreate', async (interaction) => {
             const stopBtn = new ButtonBuilder().setCustomId('btn_stop').setLabel('עצור 🛑').setStyle(ButtonStyle.Danger);
 
             const rowBtns = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
-            await interaction.update({ embeds: [embedSimple], components: [interaction.message.components[0], rowBtns] });
+            
+            // שימוש ב-reply עם ephemeral: true -> שולח את הנגן כהודעה פרטית ונסתרת רק למי שלחץ!
+            await interaction.reply({ embeds: [embedSimple], components: [rowBtns], ephemeral: true });
         } 
         
         else if (selectedValue === 'style_advanced') {
@@ -100,11 +98,13 @@ client.on('interactionCreate', async (interaction) => {
             const clearLeaveBtn2 = new ButtonBuilder().setCustomId('btn_adv_clear_leave').setLabel('ניקוי תור וניתוק 🛑').setStyle(ButtonStyle.Danger);
 
             const rowBtns2 = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
-            await interaction.update({ embeds: [embedAdvanced], components: [interaction.message.components[0], rowBtns2] });
+            
+            // שימוש ב-reply עם ephemeral: true -> שולח את הנגן כהודעה פרטית ונסתרת רק למי שלחץ!
+            await interaction.reply({ embeds: [embedAdvanced], components: [rowBtns2], ephemeral: true });
         }
     }
 
-    // 3. כפתורי שליטה וחלון קופץ
+    // 2. טיפול בכפתורי השליטה (נמצאים בתוך ההודעה הנסתרת)
     if (interaction.isButton()) {
         if (interaction.customId === 'btn_play' || interaction.customId === 'btn_adv_play') {
             const modal = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת שיר בזמן אמת');
@@ -112,7 +112,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setCustomId('song_name_input')
                 .setLabel('הקש את שם השיר או קישור מיוטיוב:')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('לדוגמה: אושר כהן')
+                .setPlaceholder('לדוגמה: אושר כהן - מנגן ושר')
                 .setRequired(true);
 
             const row = new ActionRowBuilder().addComponents(songInput);
@@ -120,15 +120,16 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.showModal(modal);
         }
 
+        // שימוש ב-deferReply כדי לענות לכפתורים האחרים בצורה נסתרת ומהירה
         await interaction.deferReply({ ephemeral: true });
 
         if (interaction.customId === 'btn_pause' || interaction.customId === 'btn_adv_pause') {
             if (!queue) return interaction.editReply({ content: 'אין מוזיקה שמנגנת כרגע.' });
             if (queue.paused) {
-                queue.resume();
+                distube.resume(interaction.guildId);
                 await interaction.editReply({ content: '▶️ המוזיקה חזרה לנגן.' });
             } else {
-                queue.pause();
+                distube.pause(interaction.guildId);
                 await interaction.editReply({ content: '⏸️ המוזיקה הושהתה.' });
             }
         }
@@ -136,7 +137,7 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId === 'btn_adv_resume') {
             if (!queue) return interaction.editReply({ content: 'אין שיר ברשימה.' });
             if (!queue.paused) return interaction.editReply({ content: 'המוזיקה כבר מנגנת.' });
-            queue.resume();
+            distube.resume(interaction.guildId);
             await interaction.editReply({ content: '▶️ המוזיקה חזרה לנגן.' });
         }
 
@@ -157,7 +158,7 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    // 4. קבלת קלט מהחלון הקופץ (הזרמה)
+    // 3. קבלת שם השיר מהחלון הקופץ והזרמתו
     if (interaction.isModalSubmit() && interaction.customId === 'music_play_modal') {
         const songName = interaction.fields.getTextInputValue('song_name_input');
         const voiceChannel = interaction.member.voice.channel;
@@ -179,7 +180,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// עדכוני הנגינה הכלליים בשרת
+// הודעות מערכת כלליות בערוץ כשהשירים מתחלפים (גלוי לכולם כדי שידעו מה מנגן עכשיו)
 distube.on('playSong', (queue, song) => {
     queue.textChannel.send(`🎶 מזרים עכשיו: **${song.name}** [${song.formattedDuration}]\nהופעל על ידי: ${song.user}`);
 });
