@@ -91,19 +91,20 @@ client.on('interactionCreate', async (interaction) => {
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
             
-            let yt_info = await play.search(songName, { limit: 1 });
-            if (!yt_info || yt_info.length === 0) {
+                       // חיפוש השיר ב-SoundCloud שעוקף את החסימות של יוטיוב בשרתים
+            let sc_info = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
+            if (!sc_info || sc_info.length === 0) {
                 return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
             }
 
-            const video = yt_info.shift();
+            const track = sc_info.shift();
 
-            let stream = await play.stream(video.url);
+            let stream = await play.stream(track.url);
             const resource = createAudioResource(stream.stream, {
                 inputType: stream.type,
                 inlineVolume: true
             });
-            
+
 
 
 
