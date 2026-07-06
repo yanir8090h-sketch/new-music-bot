@@ -139,7 +139,7 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש במערכת ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
             // 1. חיפוש חופשי ומאובטח דרך מנוע SoundCloud (עוקף לחלוטין את החסימות של יוטיוב בענן!)
@@ -149,7 +149,7 @@ client.on('interactionCreate', async (interaction) => {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            const track = results[0];
+            const track = results[0]; // משיכת השיר הראשון מתוך המערך
 
             // 2. חיבור קשיח לוויס
             connection = joinVoiceChannel({
@@ -169,7 +169,8 @@ client.on('interactionCreate', async (interaction) => {
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.name}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
+            // תיקון קריטי: שימוש ב-track.title במקום track.name כדי למנוע את הקריסה
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
