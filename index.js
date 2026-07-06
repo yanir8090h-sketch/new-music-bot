@@ -55,7 +55,7 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async (interaction) => {
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
-        const selectedValue = interaction.values[0];
+        const selectedValue = interaction.values;
 
         const modal = new ModalBuilder()
             .setCustomId(`confirm_modal_${selectedValue}`)
@@ -155,8 +155,8 @@ client.on('interactionCreate', async (interaction) => {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            // תיקון יציב: בחירה בטוחה של תוצאת החיפוש בין אם היא מערך או אובייקט ישיר
-            const track = Array.isArray(results) ? results[0] : results; 
+            // תיקון מנצח: בחירה מדויקת באינדקס הראשון [0] של המערך
+            const track = results[0]; 
 
             if (!track || !track.url) {
                 return await interaction.followUp({ content: '❌ תקלה בשאיבת נתוני השיר.', ephemeral: true });
@@ -178,7 +178,7 @@ client.on('interactionCreate', async (interaction) => {
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title || track.name || songName}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title || songName}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
