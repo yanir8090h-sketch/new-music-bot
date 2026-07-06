@@ -155,8 +155,6 @@ client.on('interactionCreate', async (interaction) => {
                    // חיפוש השיר ביוטיוב לפי השם שהמשתמש הזין
                const play = require('play-dl');
 
-               const play = require('play-dl');
-
         // חיפוש השיר ביוטיוב
         let yt_info = await play.search(songName, { limit: 1 });
         if (!yt_info || yt_info.length === 0) {
