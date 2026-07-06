@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior } = require('@discordjs/voice');
-const play = require('play-dl');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjs/voice');
+const ytdlm = require('ytdl-core-muxer');
 
 const client = new Client({
     intents: [
@@ -142,34 +142,30 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ content: `🔍 מחפש ביוטיוב ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // 1. חיפוש חופשי לפי שם השיר (ללא קישור)
-            const yt_results = await play.search(songName, { limit: 1 });
-            if (!yt_results || yt_results.length === 0) {
-                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
-            }
-
-            const track = yt_results[0]; // שליפת השיר הראשון מהתוצאות
-
-            // 2. התחברות קשיחה ויציבה לוויס
+            // התחברות קשיחה לוויס
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
                 adapterCreator: voiceChannel.guild.voiceAdapterCreator,
             });
 
-            // 3. יצירת הזרמת שמע חסינה ללא הרכיב השבור StreamType
-            const stream = await play.stream(track.url);
             player = createAudioPlayer({
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // הזנת הזרם לתוך המערכת ללא התנאי שגרם לתקיעה
-            const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
+            // שימוש במנוע הצינור החסוי כדי לעקוף את החסימה הדיגיטלית של יוטיוב!
+            const info = await ytdlm.search(songName);
+            if (!info || info.length === 0) {
+                return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה.', ephemeral: true });
+            }
+
+            const stream = await ytdlm.toggle(info[0].url, { filter: 'audioonly' });
+            const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary }); 
             
             player.play(resource);
             connection.subscribe(player);
 
-            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${track.title}**\nהופעל בהצלחה על ידי שם השיר!`);
+            interaction.channel.send(`🎶 מנגן עכשיו בחדר הקולי: **${info[0].title}**\nהופעל בהצלחה מתוך הפאנל הנסתר!`);
 
         } catch (error) {
             console.error(error);
