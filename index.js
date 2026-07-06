@@ -55,7 +55,7 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async (interaction) => {
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
-        const selectedValue = interaction.values;
+        const selectedValue = interaction.values[0];
 
         const modal = new ModalBuilder()
             .setCustomId(`confirm_modal_${selectedValue}`)
@@ -146,22 +146,24 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש במערכת ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
+            // 1. תיקון קריטי לסאונדקלאוד: משיכת השיר בצורה מאובטחת וחילוץ נכון מהמערך
             const results = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
             
             if (!results || results.length === 0) {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            // תיקון מנצח: בחירה מדויקת באינדקס הראשון [0] של המערך
+            // בחירה קשיחה באיבר הראשון במערך
             const track = results[0]; 
 
             if (!track || !track.url) {
                 return await interaction.followUp({ content: '❌ תקלה בשאיבת נתוני השיר.', ephemeral: true });
             }
 
+            // 2. חיבור לוויס
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
@@ -172,6 +174,7 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
+            // 3. יצירת הזרמה ללא ה-StreamType הישן
             const stream = await play.stream(track.url);
             const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
             
@@ -187,4 +190,8 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+client.on('error', console.error);
+process.on('unhandledRejection', console.error);
+
 client.login(process.env.TOKEN);
+
