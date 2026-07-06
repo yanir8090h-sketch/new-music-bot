@@ -18,7 +18,6 @@ let player = null;
 client.once('ready', async () => {
     console.log(`🤖 בוט המוזיקה החופשי מוכן ויציב! מחובר בתור: ${client.user.tag}`);
     
-    // הפעלת מפתח הגישה של סאונדקלאוד כדי למנוע חסימות שמע
     try {
         await play.getFreeClientID();
         console.log("✅ מפתח הגישה של סאונדקלאוד הופעל בהצלחה!");
@@ -147,19 +146,18 @@ client.on('interactionCreate', async (interaction) => {
             return await interaction.reply({ content: '❌ עליך להיכנס לחדר קולי קודם לכן!', ephemeral: true });
         }
 
-        await interaction.reply({ content: `🔍 מחפש ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
+        await interaction.reply({ content: `🔍 מחפש במערכת ומזרים עבורך את השיר: **${songName}**...`, ephemeral: true });
 
         try {
-            // חיפוש חופשי ומאובטח דרך מנוע SoundCloud (עוקף לחלוטין את החסימות של יוטיוב בענן)
             const results = await play.search(songName, { limit: 1, source: { soundcloud: 'tracks' } });
             
             if (!results || results.length === 0) {
                 return await interaction.followUp({ content: '❌ לא מצאתי שיר בשם הזה במערכת.', ephemeral: true });
             }
 
-            const track = results[0]; // לוקח את השיר הראשון מתוך המערך בצורה נכונה ומדויקת
+            // תיקון סופי: בחירה מדויקת של האיבר הראשון במערך התוצאות
+            const track = results[0]; 
 
-            // חיבור לוויס
             connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: voiceChannel.guild.id,
@@ -170,9 +168,8 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // הזרמה ישירה עם המפענח הדינמי ללא באגים
             const stream = await play.stream(track.url);
-            const resource = createAudioResource(stream.stream, { inputType: StreamType.Arbitrary }); 
+            const resource = createAudioResource(stream.stream, { inputType: stream.type }); 
             
             player.play(resource);
             connection.subscribe(player);
