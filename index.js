@@ -151,7 +151,7 @@ client.on('interactionCreate', async (interaction) => {
                 behaviors: { noSubscriber: NoSubscriberBehavior.Play }
             });
 
-            // כתובות הזרמה ישירות של שרתי מדיה רשמיים (עוקף לחלוטין את כל החסימות באינטרנט!)
+            
                    // חיפוש השיר ביוטיוב לפי השם שהמשתמש הזין
         const play = require('play-dl');
         let songName = choiceName; // משתנה שם השיר מהמודאל שלך
