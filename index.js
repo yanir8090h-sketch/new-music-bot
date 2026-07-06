@@ -164,12 +164,13 @@ client.on('interactionCreate', async (interaction) => {
             }
 
             // שימוש ב-StreamType.Arbitrary שמכריח את דיסקורד להזרים את השמע ישירות מהשרת ללא קריסות
-            const resource = createAudioResource(streamUrl, { inputType: StreamType.Arbitrary }); 
-            
-            player.play(resource);
-            connection.subscribe(player);
+          const resource = createAudioResource(streamUrl, {
+    inputType: StreamType.OggOpus,
+    inlineVolume: true
+});
 
-            interaction.channel.send(`🎶 הבוט מזרים כעת בהצלחה בחדר הקולי: **${choiceName}** באיכות HD!\nהופעל בהצלחה על ידי: ${interaction.user}`);
+
+            await interaction.reply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול " Pop Hits Live 🎧" מותאם בבטחה ופותח את ערוץ השמע על ידי :${interaction.user}`, ephemeral: true });
 
         } catch (error) {
             console.error(error);
