@@ -155,22 +155,29 @@ client.on('interactionCreate', async (interaction) => {
                    // חיפוש השיר ביוטיוב לפי השם שהמשתמש הזין
                const play = require('play-dl');
 
+               const play = require('play-dl');
+
         // חיפוש השיר ביוטיוב
         let yt_info = await play.search(songName, { limit: 1 });
         if (!yt_info || yt_info.length === 0) {
             return await interaction.editReply({ content: '❌ לא מצאתי שיר בשם הזה!', ephemeral: true });
         }
 
-        // יצירת זרם האודיו מהסרטון שנמצא
+        // יצירת זרם האודיו מהסרטון שנמצא בצורה מאובטחת
         let stream = await play.stream(yt_info[0].url, { discordPlayerCompatibility: true });
         const resource = createAudioResource(stream.stream, {
-            inputType: stream.type
+            inputType: stream.type,
+            inlineVolume: true
         });
 
-        player.play(resource);
+        // חיבור הנגן לערוץ הקול והפעלת השיר
         connection.subscribe(player);
+        player.play(resource);
 
-        await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${yt_info[0].title}** מותאם בבטחה ופותח את ערוץ השמע על ידי: ${interaction.user}`, ephemeral: true });
+        await interaction.editReply({ content: `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר: **${yt_info[0].title}** מותאם בבטחה על ידי: ${interaction.user}`, ephemeral: true });
+
+
+       
 
 
 
