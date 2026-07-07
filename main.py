@@ -182,4 +182,4 @@ async def on_ready():
     print(f"מחובר בתור {bot.user}")
 
 
-bot.run("TOKEN")
+bot.run(os.getenv("TOKEN"))
