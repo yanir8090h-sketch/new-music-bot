@@ -26,8 +26,8 @@ FFMPEG_OPTIONS = {
 
 @bot.event
 async def on_ready():
-    print(f"מחובר בתור {bot.user}")
-async def play_song(vc, query):
+    print(f"✅ הבוט מחובר: {bot.user}")
+    async def play_song(vc, query):
     try:
         search = f"ytsearch1:{query}"
 
@@ -58,43 +58,33 @@ async def play_song(vc, query):
         return title
 
     except Exception as e:
-        print(e)
+        print("שגיאה בניגון:", e)
         return None
 
 
-async def auto_leave():
-    await asyncio.sleep(10)
+@bot.event
+async def on_voice_state_update(member, before, after):
+    vc = member.guild.voice_client
 
-    for guild in bot.guilds:
-        vc = guild.voice_client
+    if vc is None or vc.channel is None:
+        return
 
-        if vc and vc.channel:
+    users = [
+        m for m in vc.channel.members
+        if not m.bot
+    ]
+
+    if len(users) == 0:
+        await asyncio.sleep(10)
+
+        if vc.is_connected():
             users = [
                 m for m in vc.channel.members
                 if not m.bot
             ]
 
-            if len(users) == 0:
-                await vc.disconnect()
-
-
-@bot.event
-async def on_voice_state_update(member, before, after):
-
-    vc = member.guild.voice_client
-
-    if vc is None:
-        return
-
-    if vc.channel:
-        users = [
-            m for m in vc.channel.members
-            if not m.bot
-        ]
-
-        if len(users) == 0:
-            bot.loop.create_task(auto_leave())
-            class MusicPanel(discord.ui.View):
+            if len(users) == 0:await vc.disconnect()
+                class MusicPanel(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -135,11 +125,13 @@ async def on_voice_state_update(member, before, after):
             )
 
             channel = interaction.user.voice.channel
-
             vc = interaction.guild.voice_client
 
             if vc is None:
-                vc = await channel.connect()
+                vc = await channel.connect(
+                    timeout=60,
+                    reconnect=True
+                )
             elif vc.channel != channel:
                 await vc.move_to(channel)
 
@@ -154,7 +146,7 @@ async def on_voice_state_update(member, before, after):
                 )
             else:
                 await interaction.followup.send(
-                    "❌ לא מצאתי שיר"
+                    "❌ לא מצאתי את השיר"
                 )
 
         except asyncio.TimeoutError:
@@ -199,9 +191,7 @@ async def on_voice_state_update(member, before, after):
         await interaction.response.send_message(
             "▶ המשכתי"
         )
-
-
-    @discord.ui.button(
+          @discord.ui.button(
         label="⏭ דלג",
         style=discord.ButtonStyle.gray
     )
@@ -243,7 +233,7 @@ async def on_voice_state_update(member, before, after):
 async def p(ctx):
 
     embed = discord.Embed(
-        title="🎵 Music Player",
+        title="🎵 Music Bot",
         description="לחץ על נגן וכתוב שם של שיר",
         color=discord.Color.blue()
     )
@@ -252,6 +242,6 @@ async def p(ctx):
         embed=embed,
         view=MusicPanel()
     )
-    TOKEN = os.getenv("TOKEN")
 
-bot.run(TOKEN)
+
+bot.run(os.getenv("TOKEN"))  
