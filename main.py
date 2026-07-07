@@ -1,247 +1,183 @@
-import discord
-from discord.ext import commands
-import asyncio
-import yt_dlp
-import os
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, NoSubscriberBehavior, StreamType } = require('@discordjsvoice');
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.voice_states = True
-
-bot = commands.Bot(
-    command_prefix="m!",
-    intents=intents
-)
-
-YTDL_OPTIONS = {
-    "format": "bestaudio/best",
-    "quiet": True,
-    "noplaylist": True
-}
-
-FFMPEG_OPTIONS = {
-    "options": "-vn"
-}
-
-
-@bot.event
-async def on_ready():
-    print(f"✅ הבוט מחובר: {bot.user}")
-    async def play_song(vc, query):
-    try:
-        search = f"ytsearch1:{query}"
-
-        with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
-            info = ydl.extract_info(
-                search,
-                download=False
-            )
-
-            if "entries" not in info:
-                return None
-
-            song = info["entries"][0]
-
-            url = song["url"]
-            title = song.get("title", "שיר")
-
-        if vc.is_playing():
-            vc.stop()
-
-        audio = discord.FFmpegPCMAudio(
-            url,
-            **FFMPEG_OPTIONS
-        )
-
-        vc.play(audio)
-
-        return title
-
-    except Exception as e:
-        print("שגיאה בניגון:", e)
-        return None
-
-
-@bot.event
-async def on_voice_state_update(member, before, after):
-    vc = member.guild.voice_client
-
-    if vc is None or vc.channel is None:
-        return
-
-    users = [
-        m for m in vc.channel.members
-        if not m.bot
+const client = new Client({
+    intents [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates
     ]
+});
 
-    if len(users) == 0:
-        await asyncio.sleep(10)
+const PREFIX = '!'; 
+let connection = null;
+let player = null;
 
-        if vc.is_connected():
-            users = [
-                m for m in vc.channel.members
-                if not m.bot
-            ]
+client.once('ready', () = {
+    console.log(`🤖 בוט המוזיקה החסין מוכן ויציב! מחובר בתור ${client.user.tag}`);
+});
 
-            if len(users) == 0:await vc.disconnect()
-                class MusicPanel(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
+function createMasterPanel() {
+    const embed = new EmbedBuilder()
+        .setColor('#2b2d31')
+        .setTitle('🗃️ Master Control Panel')
+        .setDescription('ברוך הבא לפאנל השליטה של בוט המוזיקה.nפתח את התפריט למטה ובחר את סגנון השליטה המועדף עליך');
 
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('select_panel_style')
+        .setPlaceholder('⚡ Advanced (Quick-Actions)')
+        .addOptions([
+            { label 'Simple (User-Friendly)', description 'פאנל שליטה בסיסי ונוח למשתמש', value 'style_simple', emoji '🎵' },
+            { label 'Advanced (Quick-Actions)', description 'פאנל פעולות מהירות לשליטה מלאה', value 'style_advanced', emoji '⚡' },
+        ]);
 
-    @discord.ui.button(
-        label="🎵 נגן שיר",
-        style=discord.ButtonStyle.green
-    )
-    async def play(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
-    ):
+    return { embeds [embed], components [new ActionRowBuilder().addComponents(selectMenu)] };
+}
 
-        if not interaction.user.voice:
-            await interaction.response.send_message(
-                "❌ אתה חייב להיות בוויס",
-                ephemeral=True
-            )
-            return
+client.on('messageCreate', async (message) = {
+    if (message.author.bot  !message.content.startsWith(PREFIX)) return;
+    const command = message.content.slice(PREFIX.length).trim().split( +).shift().toLowerCase();
 
-        await interaction.response.send_message(
-            "🎶 כתוב את שם השיר:",
-            ephemeral=True
-        )
+    if (command === 'setup') {
+        await message.delete().catch(() = {});
+        await message.channel.send(createMasterPanel());
+    }
+});
 
-        def check(msg):
-            return (
-                msg.author == interaction.user
-                and msg.channel == interaction.channel
-            )
+client.on('interactionCreate', async (interaction) = {
+    if (interaction.isStringSelectMenu() && interaction.customId === 'select_panel_style') {
+        const selectedValue = interaction.values;
 
-        try:
-            msg = await bot.wait_for(
-                "message",
-                check=check,
-                timeout=60
-            )
+        const modal = new ModalBuilder()
+            .setCustomId(`confirm_modal_${selectedValue}`)
+            .setTitle(selectedValue === 'style_simple'  '🎵 טעינת פאנל פשוט'  '⚡ טעינת פאנל מתקדם');
 
-            channel = interaction.user.voice.channel
-            vc = interaction.guild.voice_client
+        const confirmInput = new TextInputBuilder()
+            .setCustomId('confirm_input')
+            .setLabel('לחץ על שלח כדי לפתוח את הלוח הנסתר')
+            .setStyle(TextInputStyle.Short)
+            .setValue('אישור')
+            .setRequired(true);
 
-            if vc is None:
-                vc = await channel.connect(
-                    timeout=60,
-                    reconnect=True
-                )
-            elif vc.channel != channel:
-                await vc.move_to(channel)
+        modal.addComponents(new ActionRowBuilder().addComponents(confirmInput));
+        return await interaction.showModal(modal);
+    }
 
-            title = await play_song(
-                vc,
-                msg.content
-            )
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('confirm_modal_')) {
+        const style = interaction.customId.replace('confirm_modal_', '');
 
-            if title:
-                await interaction.followup.send(
-                    f"▶ מנגן עכשיו: **{title}**"
-                )
-            else:
-                await interaction.followup.send(
-                    "❌ לא מצאתי את השיר"
-                )
+        if (style === 'style_simple') {
+            const embedSimple = new EmbedBuilder()
+                .setColor('#5865f2')
+                .setTitle('🎵 User Friendly Control Panel')
+                .setDescription('לחץ על הכפתור הירוק כדי להקליד זרם מוזיקה חסוי ולנגן!');
 
-        except asyncio.TimeoutError:
-            await interaction.followup.send(
-                "⌛ נגמר הזמן"
-            )
+            const playBtn = new ButtonBuilder().setCustomId('btn_play').setLabel('נגן מוזיקה 🎶').setStyle(ButtonStyle.Success);
+            const pauseBtn = new ButtonBuilder().setCustomId('btn_pause').setLabel('▶️  ⏸️ הפעלהשהה').setStyle(ButtonStyle.Primary);
+            const skipBtn = new ButtonBuilder().setCustomId('btn_skip').setLabel('⏭️ דילוג').setStyle(ButtonStyle.Secondary);
+            const stopBtn = new ButtonBuilder().setCustomId('btn_stop').setLabel('🛑 ניתוק').setStyle(ButtonStyle.Danger);
 
+            const row = new ActionRowBuilder().addComponents(playBtn, pauseBtn, skipBtn, stopBtn);
+            return await interaction.reply({ embeds [embedSimple], components [row], ephemeral true });
+        }
 
-    @discord.ui.button(
-        label="⏸ השהה",
-        style=discord.ButtonStyle.blurple
-    )
-    async def pause(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
-    ):
-        vc = interaction.guild.voice_client
+        if (style === 'style_advanced') {
+            const embedAdvanced = new EmbedBuilder()
+                .setColor('#23a55a')
+                .setTitle('⚡ Advanced Quick-Actions Panel')
+                .setDescription('פעולות שליטה מתקדמות ומהירות בנגן');
 
-        if vc and vc.is_playing():
-            vc.pause()
+            const playBtn2 = new ButtonBuilder().setCustomId('btn_adv_play').setLabel('חפש ונגן שיר 🎵').setStyle(ButtonStyle.Success);
+            const pauseBtn2 = new ButtonBuilder().setCustomId('btn_adv_pause').setLabel('השהה ⏸️').setStyle(ButtonStyle.Secondary);
+            const resumeBtn2 = new ButtonBuilder().setCustomId('btn_adv_resume').setLabel('המשך ▶️').setStyle(ButtonStyle.Success);
+            const nextBtn2 = new ButtonBuilder().setCustomId('btn_adv_next').setLabel('הבא בתור ⏭️').setStyle(ButtonStyle.Primary);
+            const clearLeaveBtn2 = new ButtonBuilder().setCustomId('btn_adv_clear_leave').setLabel('ניקוי תור וניתוק 🛑').setStyle(ButtonStyle.Danger);
 
-        await interaction.response.send_message(
-            "⏸ השהיתי"
-        )
+            const row = new ActionRowBuilder().addComponents(playBtn2, pauseBtn2, resumeBtn2, nextBtn2, clearLeaveBtn2);
+            return await interaction.reply({ embeds [embedAdvanced], components [row], ephemeral true });
+        }
+    }
 
+    if (interaction.isButton()) {
+        if (interaction.customId === 'btn_play'  interaction.customId === 'btn_adv_play') {
+            const modalSong = new ModalBuilder().setCustomId('music_play_modal').setTitle('🎵 הזרמת מוזיקה בזמן אמת');
+            const songInput = new TextInputBuilder()
+                .setCustomId('song_name_input')
+                .setLabel('הקש פופ  היפ הופ  גלגלצ  רדיו')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('לדוגמה גלגלצ')
+                .setRequired(true);
 
-    @discord.ui.button(
-        label="▶ המשך",
-        style=discord.ButtonStyle.green
-    )
-    async def resume(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
-    ):
-        vc = interaction.guild.voice_client
+            modalSong.addComponents(new ActionRowBuilder().addComponents(songInput));
+            return await interaction.showModal(modalSong);
+        }
 
-        if vc and vc.is_paused():
-            vc.resume()
+        await interaction.deferUpdate();
 
-        await interaction.response.send_message(
-            "▶ המשכתי"
-        )
-          @discord.ui.button(
-        label="⏭ דלג",
-        style=discord.ButtonStyle.gray
-    )
-    async def skip(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
-    ):
-        vc = interaction.guild.voice_client
+        if (interaction.customId === 'btn_pause'  interaction.customId === 'btn_adv_pause') {
+            if (player) player.pause();
+        }
+        if (interaction.customId === 'btn_adv_resume') {
+            if (player) player.unpause();
+        }
+        if (interaction.customId === 'btn_stop'  interaction.customId === 'btn_adv_clear_leave'  interaction.customId === 'btn_skip') {
+            if (connection) {
+                connection.destroy();
+                connection = null;
+                player = null;
+            }
+        }
+    }
 
-        if vc:
-            vc.stop()
+     if (interaction.customId === 'music_modal') {
+        const songName = interaction.fields.getTextInputValue('song_input');
 
-        await interaction.response.send_message(
-            "⏭ דילגתי"
-        )
+        const voiceChannel = interaction.member.voice.channel;
+        if (!voiceChannel) {
+            return await interaction.reply({ content '❌ אתה חייב להיות בערוץ קול כדי להפעיל מוזיקה!', ephemeral true });
+        }
 
+        await interaction.deferReply({ ephemeral true });
 
-    @discord.ui.button(
-        label="⛔ עצור",
-        style=discord.ButtonStyle.red
-    )
-    async def stop(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button
-    ):
-        vc = interaction.guild.voice_client
+        try {
+            const connection = joinVoiceChannel({
+                channelId voiceChannel.id,
+                guildId voiceChannel.guild.id,
+                adapterCreator voiceChannel.guild.voiceAdapterCreator,
+            });
 
-        if vc:
-            await vc.disconnect()
+            const player = createAudioPlayer();
 
-        await interaction.response.send_message(
-            "⛔ עצרתי"
-        )
+                    let yt_info = await play.search(songName, { limit 1 });
+        if (!yt_info  yt_info.length === 0) {
+            return await interaction.editReply({ content '❌ לא מצאתי שיר בשם הזה!', ephemeral true });
+        }
 
+        const video = yt_info;
 
-@bot.command()
-async def p(ctx):
+        let stream = await play.stream(video.url);
+        const resource = createAudioResource(stream.stream, {
+            inputType stream.type,
+            inlineVolume true
+        });
 
-    embed = discord.Embed(
-        title="🎵 Music Bot",
-        description="לחץ על נגן וכתוב שם של שיר",
-        color=discord.Color.blue()
-    )
+        connection.subscribe(player);
+        player.play(resource);
 
-    await ctx.send(
-        embed=embed,
-        view=MusicPanel()
-    )
+        await interaction.editReply({ content `🎶 הבוט מזרים כעת בהצלחה בחדר הקול את השיר ${video.title} מותאם בבטחה על ידי ${interaction.user}`, ephemeral true });
+
+    } catch (error) {
+        console.error(error);
+        await interaction.editReply({ content '❌ אירעה שגיאה בהפעלת השיר!', ephemeral true });
+    }
 
 
-bot.run(os.getenv("TOKEN"))  
+          } catch (error) {
+        console.error(error);
+        await interaction.editReply({ content '❌ אירעה שגיאה בהפעלת השיר!', ephemeral true });
+    }
+});
+
+
+client.login(process.env.TOKEN);
